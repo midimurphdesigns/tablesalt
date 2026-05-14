@@ -94,18 +94,6 @@ export const evalSet: EvalCase[] = [
   },
 ];
 
-// Last recorded run — updated by an offline harness script (not run on
-// every page load — that would cost too much in tokens). Numbers are
-// honest snapshots of the v0.1 baseline. Refresh with `pnpm eval`
-// (script TBD) and check this back in.
-export const lastRun = {
-  timestamp: '2026-05-14',
-  model: 'gpt-4o-mini',
-  totalCases: evalSet.length,
-  renderKindCorrect: 11,
-  sqlExecutes: 12,
-  sqlSemanticMatch: 10,
-  meanLatencyMs: 1840,
-  notes:
-    "render-kind picker is the strongest signal; SQL semantic-match is the rate-limiter. Known failure: 'closed_share' returns null when the model omits the CAST.",
-};
+// No hardcoded numbers. The /api/eval route runs the live eval over
+// this set on demand; the EvalScoreboard component renders the
+// streaming results. The eval set itself is the only static data.

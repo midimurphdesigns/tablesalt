@@ -1,0 +1,196 @@
+import { streamObject } from 'ai';
+import { gateway } from '@ai-sdk/gateway';
+import { z } from 'zod';
+import { evalSet } from '@/lib/evals';
+import { NYC311_ROWS, NYC311_SCHEMA, execLocal } from '@/lib/eval-corpus';
+import { Ratelimit } from '@upstash/ratelimit';
+import { Redis } from '@upstash/redis';
+
+export const runtime = 'edge';
+export const maxDuration = 60;
+
+const responseSchema = z.object({
+  reasoning: z.string(),
+  sql: z.string(),
+  renderKind: z.enum(['table', 'bar', 'line', 'stat', 'list']),
+  renderHint: z.string(),
+});
+
+const redis =
+  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+    ? new Redis({
+        url: process.env.UPSTASH_REDIS_REST_URL,
+        token: process.env.UPSTASH_REDIS_REST_TOKEN,
+      })
+    : null;
+
+// Eval is expensive (12 model calls per run). Cap at 1 run per IP per hour.
+const evalLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(1, '1 h'),
+      prefix: 'tablesalt:eval',
+    })
+  : null;
+
+function getClientIp(req: Request): string {
+  return req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown';
+}
+
+// Normalize SQL for fuzzy semantic match. Lowercase, collapse whitespace,
+// remove aliases, drop trailing semicolons. Enough to forgive cosmetic
+// differences between the expected and actual SQL.
+function normalizeSql(sql: string): string {
+  return sql
+    .replace(/;\s*$/, '')
+    .replace(/\s+AS\s+\w+/gi, '')
+    .replace(/::DOUBLE/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function semanticMatch(actual: string, expected: string): boolean {
+  return normalizeSql(actual) === normalizeSql(expected);
+}
+
+export async function POST(req: Request) {
+  if (evalLimiter) {
+    const { success, reset } = await evalLimiter.limit(getClientIp(req));
+    if (!success) {
+      return new Response(
+        JSON.stringify({
+          error: 'rate-limited',
+          message: 'One eval run per hour per visitor. Try again later.',
+          retryAfterSeconds: Math.max(1, Math.ceil((reset - Date.now()) / 1000)),
+        }),
+        { status: 429, headers: { 'content-type': 'application/json' } },
+      );
+    }
+  }
+
+  if (!process.env.AI_GATEWAY_API_KEY) {
+    return new Response(
+      JSON.stringify({ error: 'AI_GATEWAY_API_KEY not configured.' }),
+      { status: 500, headers: { 'content-type': 'application/json' } },
+    );
+  }
+
+  const modelId = process.env.TABLESALT_MODEL ?? 'openai/gpt-4o-mini';
+  const model = gateway(modelId);
+
+  const schemaLines = NYC311_SCHEMA
+    .map((c) => `  "${c.name}" ${c.type.toUpperCase()}${c.sample.length > 0 ? `  -- e.g. ${c.sample.slice(0, 4).join(', ')}` : ''}`)
+    .join('\n');
+  const sample = NYC311_ROWS.slice(0, 3);
+  const system = `You are tablesalt, a careful data-exploration agent.
+You answer the user's question about a single table named \`data\` by writing one DuckDB SQL statement and choosing how it should be rendered.
+
+Hard rules:
+- Use DuckDB SQL dialect.
+- Reference only the columns provided in the schema below.
+- No DDL, no INSERT/UPDATE/DELETE, no ATTACH, no COPY, no PRAGMA — read-only SELECT only.
+- Always alias aggregate output columns with snake_case names.
+- Cap LIMIT at 200. Default to 50 for table renders.
+- For 'stat' renders, return exactly one row with one or two scalar columns.
+- For 'bar' or 'line' renders, return exactly two columns: a label and a numeric value.
+- For 'list' renders, return one or two text columns and LIMIT <= 20.
+
+The table:
+\`\`\`
+CREATE TABLE data (
+${schemaLines}
+);  -- approximately ${NYC311_ROWS.length} rows
+\`\`\`
+
+A sample of 3 rows:
+${JSON.stringify(sample, null, 2)}`;
+
+  const encoder = new TextEncoder();
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (event: unknown) => {
+        controller.enqueue(encoder.encode(JSON.stringify(event) + '\n'));
+      };
+
+      send({ kind: 'start', total: evalSet.length, model: modelId, startedAt: Date.now() });
+
+      const allLatencies: number[] = [];
+      let renderCorrect = 0;
+      let sqlExecutes = 0;
+      let sqlSemantic = 0;
+
+      for (let i = 0; i < evalSet.length; i++) {
+        const c = evalSet[i];
+        const startedAt = Date.now();
+        send({ kind: 'case-start', index: i, id: c.id, question: c.question, expected: { sql: c.expectedSql, renderKind: c.expectedRenderKind } });
+
+        try {
+          const { object } = await streamObject({
+            model,
+            schema: responseSchema,
+            system,
+            prompt: c.question,
+            temperature: 0,
+          });
+          const result = await object;
+          const latencyMs = Date.now() - startedAt;
+          allLatencies.push(latencyMs);
+
+          const renderHit = result.renderKind === c.expectedRenderKind;
+          if (renderHit) renderCorrect++;
+
+          const localResult = execLocal(result.sql);
+          const executesHit = !('error' in localResult);
+          if (executesHit) sqlExecutes++;
+
+          const semanticHit = semanticMatch(result.sql, c.expectedSql);
+          if (semanticHit) sqlSemantic++;
+
+          send({
+            kind: 'case-done',
+            index: i,
+            id: c.id,
+            latencyMs,
+            actual: { sql: result.sql, renderKind: result.renderKind },
+            verdict: { renderKind: renderHit, executes: executesHit, semanticMatch: semanticHit },
+          });
+        } catch (err) {
+          const latencyMs = Date.now() - startedAt;
+          allLatencies.push(latencyMs);
+          send({
+            kind: 'case-error',
+            index: i,
+            id: c.id,
+            latencyMs,
+            error: err instanceof Error ? err.message : 'unknown',
+          });
+        }
+      }
+
+      const meanLatency = allLatencies.length
+        ? Math.round(allLatencies.reduce((s, n) => s + n, 0) / allLatencies.length)
+        : 0;
+      send({
+        kind: 'done',
+        total: evalSet.length,
+        renderCorrect,
+        sqlExecutes,
+        sqlSemantic,
+        meanLatencyMs: meanLatency,
+        model: modelId,
+        finishedAt: Date.now(),
+      });
+
+      controller.close();
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'content-type': 'application/x-ndjson',
+      'cache-control': 'no-store',
+    },
+  });
+}
