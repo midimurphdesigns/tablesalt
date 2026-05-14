@@ -97,23 +97,74 @@ export async function profileTable(tableName = 'data'): Promise<DatasetProfile> 
   };
 }
 
+// Names that look like row identifiers / opaque keys / free-text. These
+// aggregate to garbage ("average ticket number" is nonsense) so the
+// suggester should not pick them as a metric or a grouping.
+const IDENTITY_NAME = /(^|_)(id|uuid|guid|key|name|email|phone|address|notes?|comment|description|title|ticket|cabin)s?$/i;
+
+// Hand-curated prompts for the bundled sample datasets. The signal these
+// give a first-time user dwarfs anything the generic suggester produces.
+const SAMPLE_PROMPTS: Record<string, string[]> = {
+  titanic: [
+    'What was the survival rate by passenger class?',
+    'Average fare paid by class',
+    'How many passengers survived vs. died?',
+    'Survival rate by sex',
+  ],
+  nyc311: [
+    'How many complaints per borough?',
+    'Top 5 complaint types',
+    'Complaint volume by day',
+    'What share of complaints are closed?',
+  ],
+  sales: [
+    'Total ARR by plan tier',
+    'Monthly recurring revenue over time',
+    'Average deal size by region',
+    'Churn rate by cohort',
+  ],
+};
+
+export function getSampleDatasetPrompts(key: string | null | undefined): string[] | null {
+  if (!key) return null;
+  return SAMPLE_PROMPTS[key] ?? null;
+}
+
 function suggestQuestions(columns: ColumnProfile[], rowCount: number): string[] {
   const out: string[] = [];
-  const numeric = columns.filter((c) => c.type === 'number');
+
+  // Aggregable numerics: skip identity-like names (PassengerId, ticket #, etc.)
+  // since "average passenger id" is meaningless.
+  const numeric = columns.filter(
+    (c) => c.type === 'number' && !IDENTITY_NAME.test(c.name),
+  );
+  // Categoricals: low-cardinality string columns that aren't free-text or PII.
   const categorical = columns.filter(
-    (c) => c.type === 'string' && c.cardinality > 1 && c.cardinality < Math.min(50, rowCount),
+    (c) =>
+      c.type === 'string' &&
+      c.cardinality > 1 &&
+      c.cardinality < Math.min(50, rowCount) &&
+      !IDENTITY_NAME.test(c.name),
   );
   const dates = columns.filter((c) => c.type === 'date');
 
   if (numeric.length > 0 && categorical.length > 0) {
     out.push(`Average ${numeric[0].name} by ${categorical[0].name}`);
-    out.push(`Top 10 ${categorical[0].name} by total ${numeric[0].name}`);
+    out.push(`Total ${numeric[0].name} by ${categorical[0].name}`);
+  } else if (categorical.length >= 2) {
+    out.push(`How many rows per ${categorical[0].name}?`);
+    out.push(`Distribution of ${categorical[1].name}`);
+  } else if (numeric.length >= 2) {
+    out.push(`Average ${numeric[0].name}`);
+    out.push(`Range of ${numeric[1].name}`);
   }
-  if (categorical.length > 0) {
+  if (categorical.length > 0 && out.length < 3) {
     out.push(`Distribution of ${categorical[0].name}`);
   }
   if (dates.length > 0 && numeric.length > 0) {
     out.push(`${numeric[0].name} over time`);
+  } else if (dates.length > 0) {
+    out.push(`Row count by ${dates[0].name}`);
   }
   if (out.length === 0) {
     out.push('Show the first 20 rows');

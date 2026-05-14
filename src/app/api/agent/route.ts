@@ -30,6 +30,7 @@ const responseSchema = z.object({
     ),
   reasoning: z
     .string()
+    .default('')
     .describe(
       "One short paragraph (2-3 sentences) summarizing your interpretation of the user's question. Speak to the user directly.",
     ),
@@ -45,6 +46,7 @@ const responseSchema = z.object({
     ),
   renderHint: z
     .string()
+    .default('')
     .describe(
       "One sentence — a short caption that contextualizes the rendered result for the user (e.g., 'Top 10 boroughs by complaint volume, March 2024').",
     ),

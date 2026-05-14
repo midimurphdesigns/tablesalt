@@ -94,7 +94,14 @@ export function useAgent() {
         }
 
         if (!lastSnapshot.sql || !lastSnapshot.renderKind) {
-          throw new Error('Agent finished without producing a SQL query.');
+          // Surface whatever the model managed to produce so the user
+          // can see WHY the answer didn't render — usually the model
+          // refused or asked for clarification mid-stream.
+          const reasoning = lastSnapshot.reasoning?.trim();
+          const detail = reasoning
+            ? `The model responded with text instead of a query: "${reasoning.slice(0, 200)}"`
+            : "The model didn't return a query for that question. Try rephrasing — be specific about which column you want to aggregate.";
+          throw new Error(detail);
         }
 
         const safeSql = assertReadOnlySql(lastSnapshot.sql);

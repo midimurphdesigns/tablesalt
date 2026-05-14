@@ -7,7 +7,7 @@ import { QuestionInput } from '@/components/QuestionInput';
 import { AgentResult } from '@/components/AgentResult';
 import { EvalScoreboard } from '@/components/EvalScoreboard';
 import { loadCsv, runQuery } from '@/lib/duckdb';
-import { profileTable } from '@/lib/profile';
+import { profileTable, getSampleDatasetPrompts } from '@/lib/profile';
 import { useAgent } from '@/lib/use-agent';
 import type { DatasetProfile } from '@/lib/types';
 
@@ -51,8 +51,14 @@ export function AppShell() {
       const text = await res.text();
       await loadCsv(text);
       const p = await profileTable();
+      // Curated prompts always beat the generic suggester for known samples —
+      // the generic version produced nonsense like "Top 10 Sex by total PassengerId."
+      const curated = getSampleDatasetPrompts(key);
+      const profileWithPrompts = curated
+        ? { ...p, suggestedQuestions: curated }
+        : p;
       const sample = await runQuery('SELECT * FROM data LIMIT 3');
-      setProfile(p);
+      setProfile(profileWithPrompts);
       setSampleRows(sample.rows);
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : 'Failed to load sample');
