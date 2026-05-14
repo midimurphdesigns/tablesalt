@@ -41,8 +41,8 @@ const perIpLimiter = redis
 const DAILY_REQUEST_CAP = Number(
   process.env.TABLESALT_DAILY_REQUEST_CAP ?? 200,
 );
-const MONTHLY_REQUEST_CAP = Number(
-  process.env.TABLESALT_MONTHLY_REQUEST_CAP ?? 3000,
+export const MONTHLY_REQUEST_CAP = Number(
+  process.env.TABLESALT_MONTHLY_REQUEST_CAP ?? 1500,
 );
 
 type LimitResult =
