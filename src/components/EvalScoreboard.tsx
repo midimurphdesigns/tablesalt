@@ -286,16 +286,21 @@ export function EvalScoreboard() {
         </p>
       )}
 
-      {/* Per-case results — header + rows share a single grid-template so
-          columns align. Three single-glyph verdict columns each carry
-          their own header letter (R / X / A) with a title tooltip. */}
+      {/* Per-case results — header + rows share a single grid-template
+          so columns align. Three verdict columns labelled in full
+          ('render', 'runs', 'answer') — no cryptic letters. */}
       {cases.length > 0 && (
         <div className="mt-10">
+          <p className="mb-4 max-w-[64ch] type-mono-tiny text-[color:var(--color-ink-faint)]">
+            Each row scores one question on three things: did the agent pick the right shape
+            of answer (render), did the SQL execute (runs), and did the result rows match the
+            reference query (answer).
+          </p>
           <div
             className="grid items-baseline gap-x-6 border-b border-[color:var(--color-divider)] pb-3 text-[color:var(--color-ink-faint)]"
             style={{
               gridTemplateColumns:
-                'minmax(0,1fr) 88px 72px 28px 28px 28px 64px',
+                'minmax(0,1fr) 88px 72px 72px 72px 72px 72px',
             }}
           >
             <span className="eyebrow">question</span>
@@ -305,19 +310,19 @@ export function EvalScoreboard() {
               className="eyebrow text-center"
               title="Render: agent picked the correct output shape (chart / stat / table / list)."
             >
-              R
+              render
             </span>
             <span
               className="eyebrow text-center"
-              title="Executes: SQL parses and runs against the corpus."
+              title="Runs: SQL parses and executes against the corpus."
             >
-              X
+              runs
             </span>
             <span
               className="eyebrow text-center"
               title="Answer: result rows match the reference query."
             >
-              A
+              answer
             </span>
             <span className="eyebrow text-right">expected</span>
           </div>
@@ -335,7 +340,7 @@ export function EvalScoreboard() {
                     className="grid items-baseline gap-x-6"
                     style={{
                       gridTemplateColumns:
-                        'minmax(0,1fr) 88px 72px 28px 28px 28px 64px',
+                        'minmax(0,1fr) 88px 72px 72px 72px 72px 72px',
                     }}
                   >
                     <span className="truncate type-mono text-[color:var(--color-ink)]">
