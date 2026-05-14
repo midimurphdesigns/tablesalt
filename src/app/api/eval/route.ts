@@ -68,6 +68,46 @@ function semanticMatch(actual: string, expected: string): boolean {
   return normalizeSql(actual) === normalizeSql(expected);
 }
 
+/**
+ * The actual question: did the model's SQL return the SAME ANSWER as
+ * the reference SQL? Compares result-set rows numerically (so different
+ * aliases / column order / numeric type don't matter). This is the
+ * metric a hiring manager actually cares about — "is the agent right" —
+ * vs. the stricter `semanticMatch` which compares query strings.
+ */
+type CellMap = Record<string, string | number | null>;
+function resultsEquivalent(
+  a: { columns: string[]; rows: CellMap[] } | { error: string },
+  b: { columns: string[]; rows: CellMap[] } | { error: string },
+): boolean {
+  if ('error' in a || 'error' in b) return false;
+  if (a.rows.length !== b.rows.length) return false;
+  if (a.columns.length !== b.columns.length) return false;
+
+  // Build a normalized comparable: array of sorted value-arrays per row.
+  // Sort rows because GROUP BY without ORDER BY is unordered, and the
+  // model may emit columns in a different order.
+  const normalize = (
+    r: { columns: string[]; rows: CellMap[] },
+  ): string[] =>
+    r.rows
+      .map((row) =>
+        r.columns
+          .map((c) => {
+            const v = row[c];
+            if (typeof v === 'number') return v.toFixed(6);
+            return v === null || v === undefined ? '' : String(v);
+          })
+          .sort()
+          .join('|'),
+      )
+      .sort();
+
+  const na = normalize(a);
+  const nb = normalize(b);
+  return na.every((v, i) => v === nb[i]);
+}
+
 export async function POST(req: Request) {
   if (evalLimiter) {
     const { success, reset } = await evalLimiter.limit(getClientIp(req));
@@ -148,7 +188,11 @@ ${JSON.stringify(sample, null, 2)}`;
       let renderCorrect = 0;
       let sqlExecutes = 0;
       let sqlSemantic = 0;
+      let answerMatches = 0;
       let totalCost = 0;
+
+      // Pre-compute reference result-sets once (one execLocal per expected SQL).
+      const referenceResults = evalSet.map((c) => execLocal(c.expectedSql));
 
       for (let i = 0; i < evalSet.length; i++) {
         const c = evalSet[i];
@@ -206,6 +250,9 @@ ${JSON.stringify(sample, null, 2)}`;
           const semanticHit = semanticMatch(result.sql, c.expectedSql);
           if (semanticHit) sqlSemantic++;
 
+          const answerHit = resultsEquivalent(localResult, referenceResults[i]);
+          if (answerHit) answerMatches++;
+
           const cost = estimateCost(modelId, inputTokens, outputTokens);
           if (cost !== null) totalCost += cost;
 
@@ -218,7 +265,12 @@ ${JSON.stringify(sample, null, 2)}`;
             inputTokens: inputTokens ?? null,
             outputTokens: outputTokens ?? null,
             actual: { sql: result.sql, renderKind: result.renderKind },
-            verdict: { renderKind: renderHit, executes: executesHit, semanticMatch: semanticHit },
+            verdict: {
+              renderKind: renderHit,
+              executes: executesHit,
+              semanticMatch: semanticHit,
+              answerMatches: answerHit,
+            },
           });
         } catch (err) {
           const latencyMs = Date.now() - startedAt;
@@ -242,6 +294,7 @@ ${JSON.stringify(sample, null, 2)}`;
         renderCorrect,
         sqlExecutes,
         sqlSemantic,
+        answerMatches,
         meanLatencyMs: meanLatency,
         totalCostUsd: totalCost,
         model: modelId,

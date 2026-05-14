@@ -17,7 +17,7 @@ type CaseState = {
   costUsd?: number | null;
   inputTokens?: number | null;
   outputTokens?: number | null;
-  verdict?: { renderKind: boolean; executes: boolean; semanticMatch: boolean };
+  verdict?: { renderKind: boolean; executes: boolean; semanticMatch: boolean; answerMatches: boolean };
   error?: string;
   status: 'pending' | 'running' | 'done' | 'error';
 };
@@ -27,6 +27,7 @@ type Aggregate = {
   renderCorrect: number;
   sqlExecutes: number;
   sqlSemantic: number;
+  answerMatches: number;
   meanLatencyMs: number;
   totalCostUsd: number;
   model: string;
@@ -150,6 +151,7 @@ export function EvalScoreboard() {
               renderCorrect: event.renderCorrect,
               sqlExecutes: event.sqlExecutes,
               sqlSemantic: event.sqlSemantic,
+              answerMatches: event.answerMatches ?? 0,
               meanLatencyMs: event.meanLatencyMs,
               totalCostUsd: event.totalCostUsd ?? 0,
               model: event.model,
@@ -179,9 +181,10 @@ export function EvalScoreboard() {
       </header>
 
       <p className="mt-4 max-w-[60ch] type-mono text-[color:var(--color-ink-muted)]">
-        Most AI-for-data demos hide their accuracy numbers. Click the button and watch all
-        {' '}{evalSet.length} cases run against the live model right now — text-to-SQL accuracy
-        scored against expected SQL + render kind.
+        Most AI-for-data demos hide their accuracy. Click the button and {evalSet.length} hand-labeled
+        questions run against the live model now. Each case is scored on three things —
+        does it pick the right rendering, does the SQL execute, and does the SQL return the same
+        answer as the reference query.
       </p>
 
       {/* Run button / state */}
@@ -220,13 +223,31 @@ export function EvalScoreboard() {
         )}
       </div>
 
-      {/* Aggregate stat cards — render after done */}
+      {/* Aggregate stat cards — render after done. Three headline metrics
+          in priority order. 'Answer matches' is the metric a hiring
+          manager actually cares about: did the agent get the right
+          numbers? */}
       {aggregate && (
         <ul className="mt-8 grid gap-4 md:grid-cols-3">
           {[
-            { label: 'render-kind correct', value: aggregate.renderCorrect, total: aggregate.total },
-            { label: 'sql executes', value: aggregate.sqlExecutes, total: aggregate.total },
-            { label: 'sql semantic match', value: aggregate.sqlSemantic, total: aggregate.total },
+            {
+              label: 'answer matches',
+              hint: 'Agent SQL returns the same rows as the reference query.',
+              value: aggregate.answerMatches,
+              total: aggregate.total,
+            },
+            {
+              label: 'render kind correct',
+              hint: 'Agent picked the right output shape (chart / stat / table / list).',
+              value: aggregate.renderCorrect,
+              total: aggregate.total,
+            },
+            {
+              label: 'sql executes',
+              hint: 'SQL parses and runs without error against the corpus.',
+              value: aggregate.sqlExecutes,
+              total: aggregate.total,
+            },
           ].map((s, i) => {
             const pct = Math.round((s.value / s.total) * 100);
             return (
@@ -247,6 +268,9 @@ export function EvalScoreboard() {
                 <p className="mt-2 type-mono-tiny text-[color:var(--color-ink-faint)]">
                   {s.value} / {s.total} cases
                 </p>
+                <p className="mt-3 max-w-[28ch] type-mono-tiny leading-[1.4] text-[color:var(--color-ink-muted)]">
+                  {s.hint}
+                </p>
               </motion.li>
             );
           })}
@@ -258,13 +282,23 @@ export function EvalScoreboard() {
           Mean latency: <span className="text-[color:var(--color-ink)]">{aggregate.meanLatencyMs} ms</span>
           {' · '}Total cost: <span className="text-[color:var(--color-ink)]">{formatUsd(aggregate.totalCostUsd)}</span>
           {' · '}Per case: <span className="text-[color:var(--color-ink)]">{formatUsd(aggregate.totalCostUsd / Math.max(aggregate.total, 1))}</span>
+          {' · '}Exact SQL phrasing match (stricter): <span className="text-[color:var(--color-ink)]">{Math.round((aggregate.sqlSemantic / aggregate.total) * 100)}%</span>
         </p>
       )}
 
       {/* Per-case rows — appear as the stream lands */}
       {cases.length > 0 && (
-        <ul className="mt-8 space-y-1">
-          <AnimatePresence>
+        <div className="mt-8">
+          {/* Column header — clarifies the cryptic marks */}
+          <div className="grid grid-cols-[1fr_auto_auto_auto_auto] items-baseline gap-3 border-b border-[color:var(--color-divider)] pb-2 text-[color:var(--color-ink-faint)]">
+            <span className="eyebrow">question</span>
+            <span className="eyebrow">latency</span>
+            <span className="eyebrow">cost</span>
+            <span className="eyebrow">render · runs · answer</span>
+            <span className="eyebrow">expected</span>
+          </div>
+          <ul className="space-y-1">
+            <AnimatePresence>
             {cases.map((c) => (
               <motion.li
                 key={c.id}
@@ -283,13 +317,13 @@ export function EvalScoreboard() {
                   <span className="type-mono-tiny text-[color:var(--color-ink-faint)] tabular-nums">
                     {c.costUsd !== undefined && c.costUsd !== null ? formatUsd(c.costUsd) : ''}
                   </span>
-                  <span className="type-mono-tiny">
+                  <span className="type-mono-tiny tabular-nums">
                     {c.verdict ? (
-                      <>
-                        <Mark hit={c.verdict.renderKind} label="kind" />
-                        <Mark hit={c.verdict.executes} label="run" />
-                        <Mark hit={c.verdict.semanticMatch} label="sql" />
-                      </>
+                      <span className="inline-flex gap-2">
+                        <Mark hit={c.verdict.renderKind} title="Render kind matches the expected output shape." />
+                        <Mark hit={c.verdict.executes} title="SQL parses and executes against the corpus." />
+                        <Mark hit={c.verdict.answerMatches} title="Result rows match the reference query's rows." />
+                      </span>
                     ) : c.status === 'error' ? (
                       <span className="text-[color:var(--color-fail)]">err</span>
                     ) : (
@@ -297,7 +331,7 @@ export function EvalScoreboard() {
                     )}
                   </span>
                   <span className="type-mono-tiny text-[color:var(--color-ink-faint)]">
-                    → {c.expected.renderKind}
+                    {c.expected.renderKind}
                   </span>
                 </div>
                 {c.status === 'running' && c.partialSql && (
@@ -313,7 +347,8 @@ export function EvalScoreboard() {
               </motion.li>
             ))}
           </AnimatePresence>
-        </ul>
+          </ul>
+        </div>
       )}
     </section>
   );
@@ -326,14 +361,15 @@ function formatCountdown(s: number): string {
   return rem === 0 ? `${m}m` : `${m}m ${rem}s`;
 }
 
-function Mark({ hit, label }: { hit: boolean; label: string }) {
+function Mark({ hit, title }: { hit: boolean; title: string }) {
   return (
     <span
-      className="ml-2 inline-flex items-center gap-1"
+      className="inline-block w-4 text-center"
       style={{ color: hit ? 'var(--color-pass)' : 'var(--color-fail)' }}
-      title={`${label}: ${hit ? 'pass' : 'fail'}`}
+      title={title}
+      aria-label={title}
     >
-      {hit ? '✓' : '✗'} <span className="text-[color:var(--color-ink-faint)]">{label}</span>
+      {hit ? '✓' : '✗'}
     </span>
   );
 }
