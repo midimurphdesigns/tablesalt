@@ -8,10 +8,30 @@ export const runtime = 'edge';
 export const maxDuration = 30;
 
 const responseSchema = z.object({
+  steps: z
+    .array(
+      z.object({
+        tool: z
+          .enum(['profile_schema', 'pick_render_kind', 'draft_sql', 'validate_sql'])
+          .describe(
+            'Which agent step this is. Always emit in this exact order: profile_schema, pick_render_kind, draft_sql, validate_sql.',
+          ),
+        note: z
+          .string()
+          .describe(
+            'One short sentence explaining what you concluded in this step. Speak to the user.',
+          ),
+      }),
+    )
+    .min(4)
+    .max(4)
+    .describe(
+      "The agent's reasoning trace. Always exactly 4 steps in this order: (1) profile_schema — what you noticed about the data; (2) pick_render_kind — which render kind you chose and why; (3) draft_sql — what query you wrote; (4) validate_sql — what you checked before returning.",
+    ),
   reasoning: z
     .string()
     .describe(
-      "One short paragraph (2-3 sentences) explaining your interpretation of the user's question and why you chose this query shape and render kind. Speak to the user directly, not about them.",
+      "One short paragraph (2-3 sentences) summarizing your interpretation of the user's question. Speak to the user directly.",
     ),
   sql: z
     .string()
@@ -115,7 +135,7 @@ ${schemaLines}
 );  -- approximately ${rowCount} rows
 \`\`\`${sampleBlock}
 
-Now answer the user's question. Be brief in reasoning. Choose the render kind that lets the answer speak for itself.`;
+Now answer the user's question. You must emit your reasoning as 4 steps in order: (1) profile_schema, (2) pick_render_kind, (3) draft_sql, (4) validate_sql. Each step's note is one short sentence the user will see live as you think. Then return the final summary, SQL, render kind, and caption. Be brief.`;
 
   let model;
   try {

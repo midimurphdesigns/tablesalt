@@ -18,7 +18,19 @@ export type DatasetProfile = {
 
 export type RenderKind = 'table' | 'bar' | 'line' | 'stat' | 'list';
 
+export type AgentStepTool =
+  | 'profile_schema'
+  | 'pick_render_kind'
+  | 'draft_sql'
+  | 'validate_sql';
+
+export type AgentStep = {
+  tool: AgentStepTool;
+  note: string;
+};
+
 export type AgentResponse = {
+  steps: AgentStep[];
   reasoning: string;
   sql: string;
   renderKind: RenderKind;

@@ -3,6 +3,7 @@ import { gateway } from '@ai-sdk/gateway';
 import { z } from 'zod';
 import { evalSet } from '@/lib/evals';
 import { NYC311_ROWS, NYC311_SCHEMA, execLocal } from '@/lib/eval-corpus';
+import { estimateCost } from '@/lib/pricing';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
@@ -120,6 +121,7 @@ ${JSON.stringify(sample, null, 2)}`;
       let renderCorrect = 0;
       let sqlExecutes = 0;
       let sqlSemantic = 0;
+      let totalCost = 0;
 
       for (let i = 0; i < evalSet.length; i++) {
         const c = evalSet[i];
@@ -127,14 +129,15 @@ ${JSON.stringify(sample, null, 2)}`;
         send({ kind: 'case-start', index: i, id: c.id, question: c.question, expected: { sql: c.expectedSql, renderKind: c.expectedRenderKind } });
 
         try {
-          const { object } = await streamObject({
+          const stream = streamObject({
             model,
             schema: responseSchema,
             system,
             prompt: c.question,
             temperature: 0,
           });
-          const result = await object;
+          const result = await stream.object;
+          const usage = await stream.usage;
           const latencyMs = Date.now() - startedAt;
           allLatencies.push(latencyMs);
 
@@ -148,11 +151,19 @@ ${JSON.stringify(sample, null, 2)}`;
           const semanticHit = semanticMatch(result.sql, c.expectedSql);
           if (semanticHit) sqlSemantic++;
 
+          const inputTokens = usage?.inputTokens;
+          const outputTokens = usage?.outputTokens;
+          const cost = estimateCost(modelId, inputTokens, outputTokens);
+          if (cost !== null) totalCost += cost;
+
           send({
             kind: 'case-done',
             index: i,
             id: c.id,
             latencyMs,
+            costUsd: cost,
+            inputTokens: inputTokens ?? null,
+            outputTokens: outputTokens ?? null,
             actual: { sql: result.sql, renderKind: result.renderKind },
             verdict: { renderKind: renderHit, executes: executesHit, semanticMatch: semanticHit },
           });
@@ -179,6 +190,7 @@ ${JSON.stringify(sample, null, 2)}`;
         sqlExecutes,
         sqlSemantic,
         meanLatencyMs: meanLatency,
+        totalCostUsd: totalCost,
         model: modelId,
         finishedAt: Date.now(),
       });

@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import type { AgentResponse, QueryResult } from '@/lib/types';
 import { StreamingReasoning } from './renders/StreamingReasoning';
+import { ReasoningSteps } from './ReasoningSteps';
 import { TableRender } from './renders/TableRender';
 import { BarRender } from './renders/BarRender';
 import { LineRender } from './renders/LineRender';
@@ -45,9 +46,16 @@ export function AgentResult({ status, partial, result, latencyMs, error }: Props
         )}
       </header>
 
-      {/* Reasoning — streams in field-by-field */}
-      {partial.reasoning && (
+      {/* Reasoning steps trace — fills in live as the agent thinks */}
+      {(status === 'thinking' || status === 'executing' || status === 'complete') && (
         <div className="mt-4">
+          <ReasoningSteps steps={partial.steps ?? []} />
+        </div>
+      )}
+
+      {/* Final reasoning summary — streams in via streamfield once available */}
+      {partial.reasoning && (
+        <div className="mt-6">
           <StreamingReasoning text={partial.reasoning} />
         </div>
       )}

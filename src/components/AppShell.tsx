@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import { Dropzone } from '@/components/Dropzone';
-import { SchemaPanel } from '@/components/SchemaPanel';
+import { DataPeek } from '@/components/DataPeek';
 import { QuestionInput } from '@/components/QuestionInput';
 import { AgentResult } from '@/components/AgentResult';
 import { EvalScoreboard } from '@/components/EvalScoreboard';
@@ -72,7 +72,7 @@ export function AppShell() {
   return (
     <main className="container-edge py-16 md:py-24">
       {/* Hero */}
-      <header className="mb-16 max-w-[68ch]">
+      <header className="mb-16 max-w-[72ch]">
         <p className="eyebrow">tablesalt</p>
         <h1 className="type-display mt-6 text-[clamp(48px,8vw,96px)] text-[color:var(--color-ink)]">
           Drop a CSV.
@@ -81,11 +81,29 @@ export function AppShell() {
           <br />
           <span className="text-[color:var(--color-accent)]">See generative UI.</span>
         </h1>
-        <p className="mt-8 max-w-[60ch] type-mono text-[color:var(--color-ink-muted)]">
-          In-browser data exploration agent. text-to-SQL via the Vercel AI SDK over
-          DuckDB-WASM. No upload, no backend, no signup. The eval scoreboard is on
-          the front page, not buried in a docs site.
-        </p>
+        <div className="mt-8 max-w-[60ch] type-mono text-[color:var(--color-ink-muted)] [&>p+p]:mt-4">
+          <p>
+            Drop a CSV. The agent profiles your data, picks the right kind of
+            answer for each question — a chart, a stat card, a table — and
+            renders it with motion that&apos;s load-bearing instead of decorative.
+            No upload, no backend, no signup. Everything runs in your browser.
+          </p>
+          <p>
+            I built this to show four things in one place: that an AI agent
+            can produce useful product UI, not just text; that its accuracy
+            can be measured with a real eval harness running live (scroll
+            down and press the button); that streaming UIs can feel
+            intentional instead of janky (powered by{' '}
+            <a
+              href="https://github.com/midimurphdesigns/streamfield"
+              className="text-[color:var(--color-ink)] underline decoration-[color:var(--color-ink-faint)] underline-offset-4 transition-colors hover:text-[color:var(--color-accent)] hover:decoration-[color:var(--color-accent)]"
+            >
+              streamfield
+            </a>
+            , a primitive I extracted and published to npm); and that the
+            whole thing can ship with zero backend.
+          </p>
+        </div>
       </header>
 
       {/* Load surface */}
@@ -106,7 +124,7 @@ export function AppShell() {
       {/* Loaded — schema + question + result */}
       {profile && (
         <div className="space-y-8">
-          <SchemaPanel
+          <DataPeek
             profile={profile}
             onSuggested={(q) => {
               setPrefill(q);

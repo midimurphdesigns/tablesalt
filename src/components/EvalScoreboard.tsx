@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { evalSet } from '@/lib/evals';
+import { formatUsd } from '@/lib/pricing';
 
 type CaseState = {
   index: number;
@@ -11,6 +12,9 @@ type CaseState = {
   expected: { sql: string; renderKind: string };
   actual?: { sql: string; renderKind: string };
   latencyMs?: number;
+  costUsd?: number | null;
+  inputTokens?: number | null;
+  outputTokens?: number | null;
   verdict?: { renderKind: boolean; executes: boolean; semanticMatch: boolean };
   error?: string;
   status: 'pending' | 'running' | 'done' | 'error';
@@ -22,6 +26,7 @@ type Aggregate = {
   sqlExecutes: number;
   sqlSemantic: number;
   meanLatencyMs: number;
+  totalCostUsd: number;
   model: string;
   finishedAt: number;
 };
@@ -86,7 +91,16 @@ export function EvalScoreboard() {
             setCases((prev) =>
               prev.map((c) =>
                 c.index === event.index
-                  ? { ...c, status: 'done', actual: event.actual, latencyMs: event.latencyMs, verdict: event.verdict }
+                  ? {
+                      ...c,
+                      status: 'done',
+                      actual: event.actual,
+                      latencyMs: event.latencyMs,
+                      costUsd: event.costUsd,
+                      inputTokens: event.inputTokens,
+                      outputTokens: event.outputTokens,
+                      verdict: event.verdict,
+                    }
                   : c,
               ),
             );
@@ -103,6 +117,7 @@ export function EvalScoreboard() {
               sqlExecutes: event.sqlExecutes,
               sqlSemantic: event.sqlSemantic,
               meanLatencyMs: event.meanLatencyMs,
+              totalCostUsd: event.totalCostUsd ?? 0,
               model: event.model,
               finishedAt: event.finishedAt,
             });
@@ -201,6 +216,8 @@ export function EvalScoreboard() {
       {aggregate && (
         <p className="mt-6 type-mono text-[color:var(--color-ink-muted)]">
           Mean latency: <span className="text-[color:var(--color-ink)]">{aggregate.meanLatencyMs} ms</span>
+          {' · '}Total cost: <span className="text-[color:var(--color-ink)]">{formatUsd(aggregate.totalCostUsd)}</span>
+          {' · '}Per case: <span className="text-[color:var(--color-ink)]">{formatUsd(aggregate.totalCostUsd / Math.max(aggregate.total, 1))}</span>
         </p>
       )}
 
@@ -214,13 +231,16 @@ export function EvalScoreboard() {
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2 }}
-                className="grid grid-cols-[1fr_auto_auto_auto] items-baseline gap-3 border-b border-[color:var(--color-divider)] py-2 last:border-0"
+                className="grid grid-cols-[1fr_auto_auto_auto_auto] items-baseline gap-3 border-b border-[color:var(--color-divider)] py-2 last:border-0"
               >
                 <span className="truncate type-mono text-[color:var(--color-ink)]">
                   {c.question}
                 </span>
                 <span className="type-mono-tiny text-[color:var(--color-ink-faint)]">
                   {c.latencyMs ? `${c.latencyMs} ms` : c.status === 'running' ? '…' : ''}
+                </span>
+                <span className="type-mono-tiny text-[color:var(--color-ink-faint)] tabular-nums">
+                  {c.costUsd !== undefined && c.costUsd !== null ? formatUsd(c.costUsd) : ''}
                 </span>
                 <span className="type-mono-tiny">
                   {c.verdict ? (
