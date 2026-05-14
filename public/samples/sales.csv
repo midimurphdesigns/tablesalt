@@ -1,0 +1,36 @@
+order_date,plan,region,seats,arr_usd,industry,churned
+2024-01-03,Pro,North America,12,14400,SaaS,false
+2024-01-05,Team,Europe,4,3600,Fintech,false
+2024-01-09,Enterprise,North America,80,144000,Healthcare,false
+2024-01-12,Pro,APAC,6,7200,SaaS,true
+2024-01-15,Team,North America,3,2700,Education,false
+2024-01-18,Pro,Europe,18,21600,Fintech,false
+2024-01-22,Enterprise,Europe,150,288000,Healthcare,false
+2024-01-25,Team,APAC,2,1800,Retail,true
+2024-02-01,Pro,North America,9,10800,SaaS,false
+2024-02-05,Team,Europe,5,4500,Education,false
+2024-02-09,Enterprise,APAC,60,108000,Fintech,false
+2024-02-14,Pro,North America,14,16800,Healthcare,false
+2024-02-18,Team,Europe,3,2700,Retail,true
+2024-02-22,Pro,APAC,8,9600,SaaS,false
+2024-02-26,Enterprise,North America,120,230000,Fintech,false
+2024-03-02,Team,Europe,4,3600,Education,false
+2024-03-08,Pro,APAC,11,13200,Healthcare,false
+2024-03-12,Enterprise,Europe,90,172800,SaaS,false
+2024-03-15,Pro,North America,7,8400,Retail,true
+2024-03-19,Team,APAC,6,5400,Fintech,false
+2024-03-23,Enterprise,North America,200,384000,Healthcare,false
+2024-03-27,Pro,Europe,15,18000,SaaS,false
+2024-04-01,Team,North America,4,3600,Education,false
+2024-04-05,Pro,APAC,10,12000,Fintech,false
+2024-04-10,Enterprise,Europe,75,144000,Retail,false
+2024-04-14,Pro,North America,13,15600,Healthcare,false
+2024-04-18,Team,APAC,2,1800,SaaS,true
+2024-04-22,Pro,Europe,16,19200,Fintech,false
+2024-04-26,Enterprise,APAC,55,99000,Education,false
+2024-04-30,Team,North America,5,4500,Retail,false
+2024-05-04,Pro,Europe,20,24000,Healthcare,false
+2024-05-08,Enterprise,North America,100,192000,SaaS,false
+2024-05-12,Team,APAC,7,6300,Fintech,false
+2024-05-16,Pro,North America,12,14400,Education,true
+2024-05-20,Enterprise,Europe,80,153600,Retail,false

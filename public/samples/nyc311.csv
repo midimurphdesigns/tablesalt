@@ -1,0 +1,41 @@
+complaint_id,created_date,borough,complaint_type,descriptor,status,agency
+NYC-001,2024-03-01,MANHATTAN,Noise - Residential,Loud Music/Party,Closed,NYPD
+NYC-002,2024-03-01,BROOKLYN,Heat/Hot Water,Heat,In Progress,HPD
+NYC-003,2024-03-01,QUEENS,Illegal Parking,Blocked Hydrant,Closed,NYPD
+NYC-004,2024-03-02,BRONX,Heat/Hot Water,Heat,Closed,HPD
+NYC-005,2024-03-02,MANHATTAN,Noise - Commercial,Banging/Pounding,Closed,NYPD
+NYC-006,2024-03-02,BROOKLYN,Rodent,Rat Sighting,In Progress,DOHMH
+NYC-007,2024-03-02,STATEN ISLAND,Street Condition,Pothole,Open,DOT
+NYC-008,2024-03-03,MANHATTAN,Heat/Hot Water,Hot Water,Closed,HPD
+NYC-009,2024-03-03,QUEENS,Noise - Residential,Loud Music/Party,Closed,NYPD
+NYC-010,2024-03-03,BROOKLYN,Illegal Parking,Double Parked,Closed,NYPD
+NYC-011,2024-03-04,BRONX,Rodent,Rat Sighting,In Progress,DOHMH
+NYC-012,2024-03-04,MANHATTAN,Street Condition,Pothole,Open,DOT
+NYC-013,2024-03-04,BROOKLYN,Noise - Commercial,Loud Talking,Closed,NYPD
+NYC-014,2024-03-05,QUEENS,Heat/Hot Water,Heat,Closed,HPD
+NYC-015,2024-03-05,MANHATTAN,Noise - Residential,Loud Music/Party,Open,NYPD
+NYC-016,2024-03-05,BROOKLYN,Heat/Hot Water,Heat,Closed,HPD
+NYC-017,2024-03-06,BRONX,Illegal Parking,Blocked Hydrant,Closed,NYPD
+NYC-018,2024-03-06,STATEN ISLAND,Street Condition,Pothole,Closed,DOT
+NYC-019,2024-03-06,MANHATTAN,Rodent,Rat Sighting,In Progress,DOHMH
+NYC-020,2024-03-07,QUEENS,Noise - Residential,Banging/Pounding,Closed,NYPD
+NYC-021,2024-03-07,BROOKLYN,Heat/Hot Water,Heat,In Progress,HPD
+NYC-022,2024-03-07,BRONX,Noise - Commercial,Loud Music/Party,Closed,NYPD
+NYC-023,2024-03-08,MANHATTAN,Heat/Hot Water,Hot Water,Closed,HPD
+NYC-024,2024-03-08,BROOKLYN,Rodent,Mouse Sighting,Open,DOHMH
+NYC-025,2024-03-08,QUEENS,Street Condition,Pothole,Closed,DOT
+NYC-026,2024-03-09,STATEN ISLAND,Noise - Residential,Loud Music/Party,Closed,NYPD
+NYC-027,2024-03-09,MANHATTAN,Illegal Parking,Double Parked,Closed,NYPD
+NYC-028,2024-03-09,BROOKLYN,Heat/Hot Water,Heat,Closed,HPD
+NYC-029,2024-03-10,BRONX,Rodent,Rat Sighting,In Progress,DOHMH
+NYC-030,2024-03-10,MANHATTAN,Noise - Commercial,Banging/Pounding,Open,NYPD
+NYC-031,2024-03-10,QUEENS,Heat/Hot Water,Heat,Closed,HPD
+NYC-032,2024-03-11,BROOKLYN,Noise - Residential,Loud Talking,Closed,NYPD
+NYC-033,2024-03-11,MANHATTAN,Street Condition,Pothole,Closed,DOT
+NYC-034,2024-03-12,BRONX,Heat/Hot Water,Heat,Closed,HPD
+NYC-035,2024-03-12,QUEENS,Illegal Parking,Blocked Hydrant,In Progress,NYPD
+NYC-036,2024-03-13,MANHATTAN,Rodent,Rat Sighting,Closed,DOHMH
+NYC-037,2024-03-13,BROOKLYN,Heat/Hot Water,Hot Water,Closed,HPD
+NYC-038,2024-03-14,STATEN ISLAND,Street Condition,Pothole,Open,DOT
+NYC-039,2024-03-14,MANHATTAN,Noise - Residential,Loud Music/Party,Closed,NYPD
+NYC-040,2024-03-15,QUEENS,Heat/Hot Water,Heat,Closed,HPD
