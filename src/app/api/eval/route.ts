@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { evalSet } from '@/lib/evals';
 import { NYC311_ROWS, NYC311_SCHEMA, execLocal } from '@/lib/eval-corpus';
 import { estimateCost } from '@/lib/pricing';
+import { formatRetryAfter, reserveMonthly } from '@/lib/rate-limit';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
@@ -80,6 +81,20 @@ export async function POST(req: Request) {
         { status: 429, headers: { 'content-type': 'application/json' } },
       );
     }
+  }
+
+  // Reserve N model calls against the monthly cap before starting the
+  // 12-case run. If we'd blow the budget we reject without spending.
+  const reservation = await reserveMonthly(evalSet.length);
+  if (!reservation.ok) {
+    return new Response(
+      JSON.stringify({
+        error: 'monthly-cap',
+        message: `tablesalt has reached this month's demo budget. New budget resets in ${formatRetryAfter(reservation.retryAfterSeconds)}. Run it locally in the meantime — it's open source.`,
+        retryAfterSeconds: reservation.retryAfterSeconds,
+      }),
+      { status: 429, headers: { 'content-type': 'application/json' } },
+    );
   }
 
   if (!process.env.AI_GATEWAY_API_KEY) {

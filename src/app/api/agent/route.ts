@@ -2,7 +2,7 @@ import { streamObject } from 'ai';
 import { gateway } from '@ai-sdk/gateway';
 import { z } from 'zod';
 import type { ColumnProfile } from '@/lib/types';
-import { checkLimits, getClientIp } from '@/lib/rate-limit';
+import { checkLimits, formatRetryAfter, getClientIp } from '@/lib/rate-limit';
 
 export const runtime = 'edge';
 export const maxDuration = 30;
@@ -80,7 +80,9 @@ export async function POST(req: Request) {
     const message =
       limit.reason === 'per-ip'
         ? "You're sending questions a little fast — give it a minute and try again."
-        : "tablesalt has hit its daily query budget. Come back tomorrow or run it locally — it's open source.";
+        : limit.reason === 'daily-cap'
+          ? "tablesalt has hit its daily query budget. Come back tomorrow or run it locally — it's open source."
+          : `tablesalt has reached this month's demo budget. New budget resets in ${formatRetryAfter(limit.retryAfterSeconds)}. Run it locally in the meantime — it's open source.`;
     return new Response(message, {
       status: 429,
       headers: { 'retry-after': String(limit.retryAfterSeconds) },
