@@ -39,7 +39,7 @@ export function ReasoningSteps({ steps, immediate }: Props) {
   const revealedCount = immediate ? STEP_ORDER.length : paced.length;
 
   return (
-    <ol className="relative space-y-3 border-l border-[color:var(--color-divider)] pl-5">
+    <ol className="relative space-y-4 border-l border-[color:var(--color-divider)] pl-5">
       {STEP_ORDER.map((tool, i) => {
         const step = steps[i];
         const isRevealed = i < revealedCount && Boolean(step?.note);
@@ -51,7 +51,7 @@ export function ReasoningSteps({ steps, immediate }: Props) {
             initial={{ opacity: 0, x: -4 }}
             animate={{ opacity: isRevealed ? 1 : isActive ? 0.55 : 0.18, x: 0 }}
             transition={{ duration: 0.35, ease: [0.2, 0.8, 0.2, 1] }}
-            className="relative"
+            className="relative min-h-[52px]"
           >
             <span
               aria-hidden
@@ -81,7 +81,7 @@ export function ReasoningSteps({ steps, immediate }: Props) {
                 <span className="ml-2 text-[color:var(--color-accent)]">thinking…</span>
               )}
             </p>
-            <p className="mt-1 type-mono text-[color:var(--color-ink)]">
+            <p className="mt-1 min-h-[2.6em] type-mono leading-[1.3] text-[color:var(--color-ink)]">
               {isRevealed && step?.note ? (
                 immediate ? (
                   step.note

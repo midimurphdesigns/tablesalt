@@ -127,7 +127,7 @@ Hard rules:
 - Cap LIMIT at 200. Default to 50 for table renders.
 - Prefer one-column-by-one-column aggregates for bar/line renders.
 - For 'stat' renders, the SQL must return exactly one row with one or two scalar columns.
-- For 'bar' or 'line' renders, the SQL MUST return EXACTLY TWO columns: a label (string or date) and a single numeric value. If you GROUP BY two or more columns, you MUST choose 'table' renderKind — never 'bar' or 'line'. A crosstab (e.g., GROUP BY borough, status) is ALWAYS 'table'.
+- For 'bar' or 'line' renders, the SQL MUST return EXACTLY TWO columns: a label (categorical or date) and a single numeric value. A SINGLE GROUP BY producing (group, COUNT(*) or aggregate) is the canonical 'bar' shape — USE 'bar' for this. ONLY switch to 'table' when GROUPing by two-or-more columns simultaneously (a crosstab, e.g., GROUP BY a, b) or when SELECT returns 3+ columns.
 - For 'list' renders, the SQL must return one or two text columns and LIMIT <= 20.
 - Before finalizing, re-read your SQL: count the columns in your SELECT clause. If renderKind is 'bar' or 'line' and the column count is not exactly 2, switch renderKind to 'table'.
 

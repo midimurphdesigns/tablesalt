@@ -12,10 +12,10 @@ export const runtime = 'edge';
 export const maxDuration = 300;
 
 const responseSchema = z.object({
-  reasoning: z.string(),
+  reasoning: z.string().default(''),
   sql: z.string(),
   renderKind: z.enum(['table', 'bar', 'line', 'stat', 'list']),
-  renderHint: z.string(),
+  renderHint: z.string().default(''),
 });
 
 const redis =
@@ -121,7 +121,7 @@ Hard rules:
 - Always alias aggregate output columns with snake_case names.
 - Cap LIMIT at 200. Default to 50 for table renders.
 - For 'stat' renders, return exactly one row with one or two scalar columns.
-- For 'bar' or 'line' renders, the SQL MUST return EXACTLY TWO columns: a label and a single numeric value. If you GROUP BY two or more columns, choose 'table' renderKind, not 'bar' or 'line'.
+- For 'bar' or 'line' renders, the SQL MUST return EXACTLY TWO columns: a label (categorical or date) and a single numeric value. A SINGLE GROUP BY producing (group, COUNT(*)) is the canonical 'bar' shape — USE 'bar' for this. ONLY use 'table' instead of 'bar' when you GROUP BY two-or-more columns simultaneously (e.g. GROUP BY a, b — a crosstab) or when the SELECT returns 3+ columns.
 - For 'list' renders, return one or two text columns and LIMIT <= 20.
 
 The table:
