@@ -124,8 +124,9 @@ export function AppShell() {
           <p>
             Drop a CSV. The agent profiles your data, picks the right kind of
             answer for each question — a chart, a stat card, a table — and
-            renders it with motion that&apos;s load-bearing instead of decorative.
-            No upload, no backend, no signup. Everything runs in your browser.
+            renders it with motion that exists to communicate state, not to
+            decorate. No upload, no backend, no signup. Everything runs in
+            your browser.
           </p>
           <p>
             I built this to show four things in one place: that an AI agent
