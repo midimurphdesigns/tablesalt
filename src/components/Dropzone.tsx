@@ -66,20 +66,31 @@ export function Dropzone({ onFile, onSample }: Props) {
       </motion.div>
 
       <div className="mt-6 flex flex-wrap items-center gap-2">
-        <span className="type-mono-tiny text-[color:var(--color-ink-faint)]">no data?</span>
+        <span className="type-mono-tiny text-[color:var(--color-ink-faint)]">try a sample</span>
         {[
-          { key: 'nyc311', label: 'NYC 311 (sample)' },
-          { key: 'titanic', label: 'Titanic' },
-          { key: 'sales', label: 'SaaS sales' },
+          { key: 'nyc311', label: 'NYC 311', file: 'nyc311.csv' },
+          { key: 'titanic', label: 'Titanic', file: 'titanic.csv' },
+          { key: 'sales', label: 'SaaS sales', file: 'sales.csv' },
         ].map((s) => (
-          <button
-            key={s.key}
-            type="button"
-            onClick={() => onSample(s.key)}
-            className="rounded-full border border-[color:var(--color-divider)] px-3 py-1 type-mono text-[color:var(--color-ink-muted)] transition-colors hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-accent)]"
-          >
-            {s.label}
-          </button>
+          <span key={s.key} className="inline-flex items-stretch overflow-hidden rounded-full border border-[color:var(--color-divider)] transition-colors hover:border-[color:var(--color-accent)]">
+            <button
+              type="button"
+              onClick={() => onSample(s.key)}
+              className="px-3 py-1 type-mono text-[color:var(--color-ink-muted)] transition-colors hover:text-[color:var(--color-accent)]"
+            >
+              {s.label}
+            </button>
+            <a
+              href={`/samples/${s.file}`}
+              download
+              onClick={(e) => e.stopPropagation()}
+              aria-label={`Download ${s.label} CSV`}
+              className="border-l border-[color:var(--color-divider)] px-2.5 py-1 type-mono-tiny text-[color:var(--color-ink-faint)] transition-colors hover:bg-[color:var(--color-accent)]/10 hover:text-[color:var(--color-accent)]"
+              title={`Download ${s.label} CSV`}
+            >
+              ↓
+            </a>
+          </span>
         ))}
       </div>
     </div>
