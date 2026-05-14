@@ -1,6 +1,5 @@
 import { streamObject } from 'ai';
-import { openai } from '@ai-sdk/openai';
-import { anthropic } from '@ai-sdk/anthropic';
+import { gateway } from '@ai-sdk/gateway';
 import { z } from 'zod';
 import type { ColumnProfile } from '@/lib/types';
 import { checkLimits, getClientIp } from '@/lib/rate-limit';
@@ -38,22 +37,18 @@ type Body = {
   sampleRows?: Array<Record<string, unknown>>;
 };
 
+// tablesalt routes every model call through Vercel's AI Gateway. The
+// Gateway handles provider keys, billing, fallback, and observability.
+// One env var (AI_GATEWAY_API_KEY) replaces every direct provider key.
+// Switch models by changing TABLESALT_MODEL — no redeploy of keys.
 function pickModel() {
-  const provider = (process.env.TABLESALT_MODEL_PROVIDER ?? 'openai').toLowerCase();
-  if (provider === 'anthropic') {
-    if (!process.env.ANTHROPIC_API_KEY) {
-      throw new Error(
-        'TABLESALT_MODEL_PROVIDER is "anthropic" but ANTHROPIC_API_KEY is not set.',
-      );
-    }
-    return anthropic('claude-haiku-4-5');
-  }
-  if (!process.env.OPENAI_API_KEY) {
+  if (!process.env.AI_GATEWAY_API_KEY) {
     throw new Error(
-      'OPENAI_API_KEY is not set. Add it in Vercel environment variables, or set TABLESALT_MODEL_PROVIDER=anthropic with ANTHROPIC_API_KEY.',
+      'AI_GATEWAY_API_KEY is not set. Add it in Vercel environment variables.',
     );
   }
-  return openai('gpt-4o-mini');
+  const id = process.env.TABLESALT_MODEL ?? 'openai/gpt-4o-mini';
+  return gateway(id);
 }
 
 export async function POST(req: Request) {
