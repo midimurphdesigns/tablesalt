@@ -39,10 +39,16 @@ export function DataPeek({ profile, onSuggested }: Props) {
       <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
         {/* Left — column profile */}
         <div className="border-b border-[color:var(--color-divider)] md:border-b-0 md:border-r">
-          <p className="px-6 pb-3 type-mono-tiny text-[color:var(--color-ink-faint)] md:px-8">
-            columns
-          </p>
-          <ul className="divide-y divide-[color:var(--color-divider)] border-t border-[color:var(--color-divider)]">
+          {/* Column-list header — three labels matching the spreadsheet's
+              header treatment so a viewer parses both halves the same way. */}
+          <div className="grid grid-cols-[1.2fr_2.5rem_minmax(0,1.6fr)] items-baseline gap-4 border-b border-[color:var(--color-divider)] bg-[color:var(--color-canvas)] px-6 py-2 md:px-8">
+            <span className="type-mono-tiny text-[color:var(--color-ink-faint)]">column</span>
+            <span className="type-mono-tiny text-[color:var(--color-ink-faint)]">type</span>
+            <span className="type-mono-tiny text-[color:var(--color-ink-faint)]">
+              distribution
+            </span>
+          </div>
+          <ul className="divide-y divide-[color:var(--color-divider)]">
             {profile.columns.map((col, i) => (
               <ProfileRow key={col.name} col={col} index={i} />
             ))}
