@@ -286,67 +286,101 @@ export function EvalScoreboard() {
         </p>
       )}
 
-      {/* Per-case rows — appear as the stream lands */}
+      {/* Per-case results — header + rows share a single grid-template so
+          columns align. Three single-glyph verdict columns each carry
+          their own header letter (R / X / A) with a title tooltip. */}
       {cases.length > 0 && (
-        <div className="mt-8">
-          {/* Column header — clarifies the cryptic marks */}
-          <div className="grid grid-cols-[1fr_auto_auto_auto_auto] items-baseline gap-3 border-b border-[color:var(--color-divider)] pb-2 text-[color:var(--color-ink-faint)]">
+        <div className="mt-10">
+          <div
+            className="grid items-baseline gap-x-6 border-b border-[color:var(--color-divider)] pb-3 text-[color:var(--color-ink-faint)]"
+            style={{
+              gridTemplateColumns:
+                'minmax(0,1fr) 88px 72px 28px 28px 28px 64px',
+            }}
+          >
             <span className="eyebrow">question</span>
-            <span className="eyebrow">latency</span>
-            <span className="eyebrow">cost</span>
-            <span className="eyebrow">render · runs · answer</span>
-            <span className="eyebrow">expected</span>
+            <span className="eyebrow text-right">latency</span>
+            <span className="eyebrow text-right">cost</span>
+            <span
+              className="eyebrow text-center"
+              title="Render: agent picked the correct output shape (chart / stat / table / list)."
+            >
+              R
+            </span>
+            <span
+              className="eyebrow text-center"
+              title="Executes: SQL parses and runs against the corpus."
+            >
+              X
+            </span>
+            <span
+              className="eyebrow text-center"
+              title="Answer: result rows match the reference query."
+            >
+              A
+            </span>
+            <span className="eyebrow text-right">expected</span>
           </div>
-          <ul className="space-y-1">
+          <ul className="divide-y divide-[color:var(--color-divider)]">
             <AnimatePresence>
-            {cases.map((c) => (
-              <motion.li
-                key={c.id}
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
-                className="border-b border-[color:var(--color-divider)] py-2 last:border-0"
-              >
-                <div className="grid grid-cols-[1fr_auto_auto_auto_auto] items-baseline gap-3">
-                  <span className="truncate type-mono text-[color:var(--color-ink)]">
-                    {c.question}
-                  </span>
-                  <span className="type-mono-tiny text-[color:var(--color-ink-faint)] tabular-nums">
-                    {c.latencyMs ? `${c.latencyMs} ms` : c.status === 'running' ? '…' : ''}
-                  </span>
-                  <span className="type-mono-tiny text-[color:var(--color-ink-faint)] tabular-nums">
-                    {c.costUsd !== undefined && c.costUsd !== null ? formatUsd(c.costUsd) : ''}
-                  </span>
-                  <span className="type-mono-tiny tabular-nums">
+              {cases.map((c) => (
+                <motion.li
+                  key={c.id}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="py-3"
+                >
+                  <div
+                    className="grid items-baseline gap-x-6"
+                    style={{
+                      gridTemplateColumns:
+                        'minmax(0,1fr) 88px 72px 28px 28px 28px 64px',
+                    }}
+                  >
+                    <span className="truncate type-mono text-[color:var(--color-ink)]">
+                      {c.question}
+                    </span>
+                    <span className="text-right type-mono-tiny text-[color:var(--color-ink-faint)] tabular-nums">
+                      {c.latencyMs ? `${c.latencyMs} ms` : c.status === 'running' ? '…' : ''}
+                    </span>
+                    <span className="text-right type-mono-tiny text-[color:var(--color-ink-faint)] tabular-nums">
+                      {c.costUsd !== undefined && c.costUsd !== null ? formatUsd(c.costUsd) : ''}
+                    </span>
+
                     {c.verdict ? (
-                      <span className="inline-flex gap-2">
+                      <>
                         <Mark hit={c.verdict.renderKind} title="Render kind matches the expected output shape." />
                         <Mark hit={c.verdict.executes} title="SQL parses and executes against the corpus." />
                         <Mark hit={c.verdict.answerMatches} title="Result rows match the reference query's rows." />
-                      </span>
+                      </>
                     ) : c.status === 'error' ? (
-                      <span className="text-[color:var(--color-fail)]">err</span>
+                      <span className="col-span-3 text-center type-mono-tiny text-[color:var(--color-fail)]">err</span>
                     ) : (
-                      <span className="text-[color:var(--color-ink-faint)]">·</span>
+                      <>
+                        <span className="text-center type-mono-tiny text-[color:var(--color-ink-faint)]">·</span>
+                        <span className="text-center type-mono-tiny text-[color:var(--color-ink-faint)]">·</span>
+                        <span className="text-center type-mono-tiny text-[color:var(--color-ink-faint)]">·</span>
+                      </>
                     )}
-                  </span>
-                  <span className="type-mono-tiny text-[color:var(--color-ink-faint)]">
-                    {c.expected.renderKind}
-                  </span>
-                </div>
-                {c.status === 'running' && c.partialSql && (
-                  <p className="mt-1 truncate type-mono-tiny text-[color:var(--color-accent)]/70">
-                    {c.partialSql}
-                  </p>
-                )}
-                {c.error && (
-                  <p className="mt-1 truncate type-mono-tiny text-[color:var(--color-fail)]/80">
-                    {c.error}
-                  </p>
-                )}
-              </motion.li>
-            ))}
-          </AnimatePresence>
+
+                    <span className="text-right type-mono-tiny text-[color:var(--color-ink-faint)]">
+                      {c.expected.renderKind}
+                    </span>
+                  </div>
+                  {c.status === 'running' && c.partialSql && (
+                    <p className="mt-2 truncate type-mono-tiny text-[color:var(--color-accent)]/70">
+                      {c.partialSql}
+                    </p>
+                  )}
+                  {c.error && (
+                    <p className="mt-2 truncate type-mono-tiny text-[color:var(--color-fail)]/80">
+                      {c.error}
+                    </p>
+                  )}
+                </motion.li>
+              ))}
+            </AnimatePresence>
           </ul>
         </div>
       )}
@@ -364,10 +398,10 @@ function formatCountdown(s: number): string {
 function Mark({ hit, title }: { hit: boolean; title: string }) {
   return (
     <span
-      className="inline-block w-4 text-center"
+      className="text-center type-mono tabular-nums"
       style={{ color: hit ? 'var(--color-pass)' : 'var(--color-fail)' }}
       title={title}
-      aria-label={title}
+      aria-label={`${title} ${hit ? 'pass' : 'fail'}`}
     >
       {hit ? '✓' : '✗'}
     </span>
