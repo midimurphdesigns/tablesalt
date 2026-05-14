@@ -40,7 +40,16 @@ export function AgentResult({ status, partial, result, latencyMs, error }: Props
 
   if (status === 'idle') return null;
 
-  const showAnswer = status === 'complete' && result && partial.renderKind && readyToShowAnswer;
+  // Defensive fallback: if the model emitted 'bar'/'line' but the SQL
+  // returned ≠2 columns (e.g., a multi-GROUP BY crosstab), the numeric
+  // axis would be a string and the chart would render NaN. Fall through
+  // to 'table' so the user sees real values instead of broken bars.
+  const rawKind = partial.renderKind;
+  const colCount = result?.columns.length ?? 0;
+  const effectiveKind =
+    (rawKind === 'bar' || rawKind === 'line') && colCount !== 2 ? 'table' : rawKind;
+
+  const showAnswer = status === 'complete' && result && effectiveKind && readyToShowAnswer;
   const showThinking = status === 'thinking' || status === 'executing' || (status === 'complete' && !readyToShowAnswer);
 
   return (
@@ -72,7 +81,7 @@ export function AgentResult({ status, partial, result, latencyMs, error }: Props
       <AnimatePresence mode="wait">
         {showAnswer && (
           <motion.div
-            key={partial.renderKind}
+            key={effectiveKind}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
@@ -85,11 +94,11 @@ export function AgentResult({ status, partial, result, latencyMs, error }: Props
                 {partial.renderHint}
               </p>
             )}
-            {partial.renderKind === 'table' && result && <TableRender result={result} />}
-            {partial.renderKind === 'bar' && result && <BarRender result={result} />}
-            {partial.renderKind === 'line' && result && <LineRender result={result} />}
-            {partial.renderKind === 'stat' && result && <StatRender result={result} />}
-            {partial.renderKind === 'list' && result && <ListRender result={result} />}
+            {effectiveKind === 'table' && result && <TableRender result={result} />}
+            {effectiveKind === 'bar' && result && <BarRender result={result} />}
+            {effectiveKind === 'line' && result && <LineRender result={result} />}
+            {effectiveKind === 'stat' && result && <StatRender result={result} />}
+            {effectiveKind === 'list' && result && <ListRender result={result} />}
           </motion.div>
         )}
       </AnimatePresence>

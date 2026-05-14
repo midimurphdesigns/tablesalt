@@ -9,7 +9,7 @@ import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
 export const runtime = 'edge';
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const responseSchema = z.object({
   reasoning: z.string(),
@@ -121,7 +121,7 @@ Hard rules:
 - Always alias aggregate output columns with snake_case names.
 - Cap LIMIT at 200. Default to 50 for table renders.
 - For 'stat' renders, return exactly one row with one or two scalar columns.
-- For 'bar' or 'line' renders, return exactly two columns: a label and a numeric value.
+- For 'bar' or 'line' renders, the SQL MUST return EXACTLY TWO columns: a label and a single numeric value. If you GROUP BY two or more columns, choose 'table' renderKind, not 'bar' or 'line'.
 - For 'list' renders, return one or two text columns and LIMIT <= 20.
 
 The table:
