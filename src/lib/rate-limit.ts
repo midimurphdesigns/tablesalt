@@ -131,6 +131,29 @@ export function getClientIp(req: Request): string {
 }
 
 /**
+ * Owner bypass — when the request carries `?owner=$TABLESALT_ADMIN_KEY`
+ * or the `ts_owner` cookie matching the same secret, skip all rate
+ * limiting. Lets the founder iterate against the live demo without
+ * burning the public visitor budget.
+ *
+ * Default-deny: if the env var is unset, owner-mode is impossible.
+ */
+export function isOwner(req: Request): boolean {
+  const adminKey = process.env.TABLESALT_ADMIN_KEY;
+  if (!adminKey) return false;
+
+  const url = new URL(req.url);
+  const queryKey = url.searchParams.get('owner');
+  if (queryKey && queryKey === adminKey) return true;
+
+  const cookie = req.headers.get('cookie') ?? '';
+  const match = cookie.match(/(?:^|;\s*)ts_owner=([^;]+)/);
+  if (match && decodeURIComponent(match[1]) === adminKey) return true;
+
+  return false;
+}
+
+/**
  * Reserve N requests against the monthly cap atomically. Returns ok if
  * the reservation fits under the cap, else rejects without writing.
  *

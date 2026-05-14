@@ -2,7 +2,7 @@ import { streamObject } from 'ai';
 import { gateway } from '@ai-sdk/gateway';
 import { z } from 'zod';
 import type { ColumnProfile } from '@/lib/types';
-import { checkLimits, formatRetryAfter, getClientIp } from '@/lib/rate-limit';
+import { checkLimits, formatRetryAfter, getClientIp, isOwner } from '@/lib/rate-limit';
 
 export const runtime = 'edge';
 export const maxDuration = 30;
@@ -76,8 +76,10 @@ function pickModel() {
 export async function POST(req: Request) {
   // Rate limit + daily cap. Fails open in local dev when Upstash isn't
   // configured; in production both env vars must be set.
+  // Owner-mode bypasses all caps — gated by TABLESALT_ADMIN_KEY.
   const ip = getClientIp(req);
-  const limit = await checkLimits(ip);
+  const ownerBypass = isOwner(req);
+  const limit = ownerBypass ? { ok: true as const } : await checkLimits(ip);
   if (!limit.ok) {
     const message =
       limit.reason === 'per-ip'

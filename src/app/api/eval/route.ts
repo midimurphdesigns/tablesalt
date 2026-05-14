@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { evalSet } from '@/lib/evals';
 import { NYC311_ROWS, NYC311_SCHEMA, execLocal } from '@/lib/eval-corpus';
 import { estimateCost } from '@/lib/pricing';
-import { formatRetryAfter, reserveMonthly } from '@/lib/rate-limit';
+import { formatRetryAfter, reserveMonthly, isOwner } from '@/lib/rate-limit';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
@@ -109,7 +109,9 @@ function resultsEquivalent(
 }
 
 export async function POST(req: Request) {
-  if (evalLimiter) {
+  const ownerBypass = isOwner(req);
+
+  if (evalLimiter && !ownerBypass) {
     const { success, reset } = await evalLimiter.limit(getClientIp(req));
     if (!success) {
       return new Response(
@@ -125,7 +127,10 @@ export async function POST(req: Request) {
 
   // Reserve N model calls against the monthly cap before starting the
   // 12-case run. If we'd blow the budget we reject without spending.
-  const reservation = await reserveMonthly(evalSet.length);
+  // Owner-mode skips this so testing doesn't burn the public budget.
+  const reservation = ownerBypass
+    ? { ok: true as const }
+    : await reserveMonthly(evalSet.length);
   if (!reservation.ok) {
     return new Response(
       JSON.stringify({

@@ -17,6 +17,46 @@ export const runtime = 'edge';
  *   - `tablesalt:day:*`    (global daily counter)
  *   - `tablesalt:month:*`  (global monthly counter — the spend ceiling)
  */
+/**
+ * GET form sets the `ts_owner` cookie so subsequent requests bypass
+ * all rate-limit / monthly-cap gates. Lets the founder iterate against
+ * the live site without burning the public budget — one URL hit, then
+ * use the site normally. Cookie is HttpOnly + 1 hour TTL by default,
+ * or use `?ttl=N` to override (seconds).
+ *
+ * Usage: visit /api/admin/reset-limits?key=...&bypass=set in a browser
+ *        once; then continue testing tablesalt normally.
+ */
+export async function GET(req: Request) {
+  const adminKey = process.env.TABLESALT_ADMIN_KEY;
+  if (!adminKey) return new Response('Not found', { status: 404 });
+
+  const url = new URL(req.url);
+  const providedKey = url.searchParams.get('key');
+  if (!providedKey || providedKey !== adminKey) {
+    return new Response('Not found', { status: 404 });
+  }
+
+  const mode = url.searchParams.get('bypass');
+  if (mode === 'clear') {
+    return new Response('owner cookie cleared', {
+      status: 200,
+      headers: {
+        'set-cookie': `ts_owner=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`,
+      },
+    });
+  }
+
+  // Default GET = set the bypass cookie.
+  const ttl = Math.max(60, Math.min(86_400, Number(url.searchParams.get('ttl') ?? 3600)));
+  return new Response(`owner cookie set for ${ttl}s — you can now use the site without rate limits`, {
+    status: 200,
+    headers: {
+      'set-cookie': `ts_owner=${encodeURIComponent(adminKey)}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${ttl}`,
+    },
+  });
+}
+
 export async function POST(req: Request) {
   const adminKey = process.env.TABLESALT_ADMIN_KEY;
   if (!adminKey) {
