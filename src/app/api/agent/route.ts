@@ -191,6 +191,10 @@ Now answer the user's question. You must emit your reasoning as 4 steps in order
     headers: {
       'content-type': 'application/x-ndjson',
       'cache-control': 'no-store',
+      // Disable proxy buffering so each partial-object snapshot flushes
+      // immediately. Without this Vercel can chunk the response and the
+      // reasoning trace appears all at once at the end.
+      'x-accel-buffering': 'no',
     },
   });
 }

@@ -59,14 +59,9 @@ export function ReasoningSteps({ steps, immediate }: Props) {
             >
               <motion.span
                 animate={{
-                  scale: isActive ? [1, 1.4, 1] : 1,
                   opacity: isRevealed ? 1 : isActive ? 0.85 : 0.3,
                 }}
-                transition={
-                  isActive
-                    ? { duration: 1.1, repeat: Infinity, ease: 'easeInOut' }
-                    : { duration: 0.3 }
-                }
+                transition={{ duration: 0.3 }}
                 className={`block h-1.5 w-1.5 rounded-full ${
                   isRevealed || isActive
                     ? 'bg-[color:var(--color-accent)]'

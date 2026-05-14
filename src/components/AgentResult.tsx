@@ -18,10 +18,10 @@ type Props = {
   error: string | null;
 };
 
-// Pacing budget — must roughly match ReasoningSteps' STEP_REVEAL_MS * 4
-// plus the typewriter tail on the last step. Tuned by feel; visible
-// agent loop is ~2.4s end-to-end.
-const REVEAL_BUDGET_MS = 2400;
+// Pacing budget — how long after the stream completes before the
+// answer reveals. Lowered to 1200ms so the result lands quickly even
+// if the model streamed the steps all in one final burst.
+const REVEAL_BUDGET_MS = 1200;
 
 export function AgentResult({ status, partial, result, latencyMs, error }: Props) {
   // Gate the answer on the reasoning trace finishing its paced reveal.

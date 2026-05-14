@@ -163,6 +163,22 @@ ${JSON.stringify(sample, null, 2)}`;
             prompt: c.question,
             temperature: 0,
           });
+
+          // Stream partials WITHIN each case so the per-case row visibly
+          // updates while the model is generating. Without this the user
+          // sees a 5s "running…" then a snap to done — feels broken.
+          for await (const partial of stream.partialObjectStream) {
+            send({
+              kind: 'case-partial',
+              index: i,
+              id: c.id,
+              partial: {
+                sql: partial.sql,
+                renderKind: partial.renderKind,
+                reasoning: partial.reasoning,
+              },
+            });
+          }
           const result = await stream.object;
 
           // usage is a Promise that may reject on some Gateway responses —
@@ -240,6 +256,10 @@ ${JSON.stringify(sample, null, 2)}`;
     headers: {
       'content-type': 'application/x-ndjson',
       'cache-control': 'no-store',
+      // Disable proxy buffering on Vercel / nginx so each NDJSON line
+      // flushes to the client immediately instead of being held in a
+      // chunk. Without this, eval cases appear to land all at once.
+      'x-accel-buffering': 'no',
     },
   });
 }

@@ -11,6 +11,8 @@ type CaseState = {
   question: string;
   expected: { sql: string; renderKind: string };
   actual?: { sql: string; renderKind: string };
+  partialSql?: string;
+  partialRenderKind?: string;
   latencyMs?: number;
   costUsd?: number | null;
   inputTokens?: number | null;
@@ -107,6 +109,18 @@ export function EvalScoreboard() {
             );
           } else if (event.kind === 'case-start') {
             setCases((prev) => prev.map((c) => (c.index === event.index ? { ...c, status: 'running' } : c)));
+          } else if (event.kind === 'case-partial') {
+            setCases((prev) =>
+              prev.map((c) =>
+                c.index === event.index
+                  ? {
+                      ...c,
+                      partialSql: event.partial?.sql,
+                      partialRenderKind: event.partial?.renderKind,
+                    }
+                  : c,
+              ),
+            );
           } else if (event.kind === 'case-done') {
             setCases((prev) =>
               prev.map((c) =>
@@ -286,6 +300,11 @@ export function EvalScoreboard() {
                     → {c.expected.renderKind}
                   </span>
                 </div>
+                {c.status === 'running' && c.partialSql && (
+                  <p className="mt-1 truncate type-mono-tiny text-[color:var(--color-accent)]/70">
+                    {c.partialSql}
+                  </p>
+                )}
                 {c.error && (
                   <p className="mt-1 truncate type-mono-tiny text-[color:var(--color-fail)]/80">
                     {c.error}
