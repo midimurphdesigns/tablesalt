@@ -29,7 +29,6 @@ export function DataPeek({ profile, onSuggested }: Props) {
 
   return (
     <section className="surface relative overflow-hidden">
-      {/* Section header */}
       <div className="flex flex-wrap items-baseline justify-between gap-2 p-6 pb-4 md:p-8 md:pb-5">
         <h2 className="type-h2">Your data.</h2>
         <p className="type-mono-tiny text-[color:var(--color-ink-faint)]">
@@ -45,7 +44,7 @@ export function DataPeek({ profile, onSuggested }: Props) {
           </p>
           <ul className="divide-y divide-[color:var(--color-divider)] border-t border-[color:var(--color-divider)]">
             {profile.columns.map((col, i) => (
-              <ProfileRow key={col.name} col={col} index={i} rowCount={profile.rowCount} />
+              <ProfileRow key={col.name} col={col} index={i} />
             ))}
           </ul>
         </div>
@@ -110,7 +109,6 @@ export function DataPeek({ profile, onSuggested }: Props) {
         </div>
       </div>
 
-      {/* Suggested questions footer */}
       {profile.suggestedQuestions.length > 0 && (
         <div className="border-t border-[color:var(--color-divider)] p-6 md:p-8">
           <p className="eyebrow mb-3">try asking</p>
@@ -129,103 +127,124 @@ export function DataPeek({ profile, onSuggested }: Props) {
           </ul>
         </div>
       )}
-
     </section>
   );
 }
 
-function ProfileRow({
-  col,
-  index,
-  rowCount,
-}: {
-  col: ColumnProfile;
-  index: number;
-  rowCount: number;
-}) {
+function ProfileRow({ col, index }: { col: ColumnProfile; index: number }) {
   return (
     <motion.li
       initial={{ opacity: 0, x: -4 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.03, duration: 0.25 }}
-      className="grid grid-cols-[1fr_auto] items-baseline gap-3 px-6 py-3 md:px-8"
+      className="grid grid-cols-1 gap-2 px-6 py-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1.5fr)_auto] md:items-center md:gap-4 md:px-8"
     >
       <div className="min-w-0">
         <p className="truncate type-mono text-[color:var(--color-ink)]">{col.name}</p>
-        <ProfileChart col={col} rowCount={rowCount} />
+        <p className="mt-0.5 type-mono-tiny text-[color:var(--color-ink-faint)]">
+          {col.type} · {col.cardinality.toLocaleString()} distinct
+        </p>
       </div>
-      <p className="shrink-0 type-mono-tiny text-[color:var(--color-ink-faint)]">
-        {col.type} · {col.cardinality.toLocaleString()}
-      </p>
+      <div className="min-w-0">
+        <ProfileChart col={col} />
+      </div>
+      <div className="hidden md:block" />
     </motion.li>
   );
 }
 
-function ProfileChart({ col, rowCount }: { col: ColumnProfile; rowCount: number }) {
-  // Type-aware micro-charts. Drawn as horizontal bars / wedges in pure
-  // CSS — no external charting lib needed for a ~60px wide visual.
-  if (col.type === 'number' || col.type === 'date') {
+function ProfileChart({ col }: { col: ColumnProfile }) {
+  if (col.type === 'date') {
+    if (col.min !== undefined && col.max !== undefined) {
+      return (
+        <p className="truncate type-mono-tiny text-[color:var(--color-ink-muted)]">
+          <span className="text-[color:var(--color-ink)]">{String(col.min)}</span>
+          <span className="mx-1.5 text-[color:var(--color-ink-faint)]">→</span>
+          <span className="text-[color:var(--color-ink)]">{String(col.max)}</span>
+        </p>
+      );
+    }
     return (
-      <p className="mt-1.5 truncate type-mono-tiny text-[color:var(--color-ink-faint)]">
-        {col.min !== undefined && col.max !== undefined
-          ? `${formatBound(col.min)} → ${formatBound(col.max)}`
-          : col.sample.slice(0, 3).join(' · ')}
+      <p className="truncate type-mono-tiny text-[color:var(--color-ink-faint)]">
+        {col.sample.slice(0, 3).join(' · ')}
       </p>
     );
   }
 
-  if (col.type === 'boolean') {
+  if (col.type === 'number' && col.histogram && col.histogram.length > 0) {
+    const buckets: number[] = Array(10).fill(0);
+    for (const b of col.histogram) {
+      if (b.bucket >= 0 && b.bucket < 10) buckets[b.bucket] = b.count;
+    }
+    const maxBucket = Math.max(...buckets, 1);
     return (
-      <div className="mt-1.5 flex h-1.5 overflow-hidden rounded-full bg-[color:var(--color-canvas)]">
-        <motion.div
-          initial={{ scaleX: 0 }}
-          animate={{ scaleX: 1 }}
-          transition={{ delay: 0.2, duration: 0.4, ease: [0.2, 0.8, 0.2, 1] }}
-          style={{ width: '60%', transformOrigin: 'left' }}
-          className="bg-[color:var(--color-accent)]/40"
-        />
+      <div className="flex h-6 items-end gap-[2px]" title={`Histogram across ${col.cardinality} distinct values`}>
+        {buckets.map((count, i) => {
+          const h = (count / maxBucket) * 100;
+          return (
+            <motion.div
+              key={i}
+              initial={{ scaleY: 0 }}
+              animate={{ scaleY: 1 }}
+              transition={{ delay: 0.2 + i * 0.02, duration: 0.3, ease: [0.2, 0.8, 0.2, 1] }}
+              style={{ height: `${Math.max(h, 6)}%`, transformOrigin: 'bottom' }}
+              className="flex-1 rounded-sm bg-[color:var(--color-accent)]/40"
+            />
+          );
+        })}
       </div>
     );
   }
 
-  // string / categorical — stacked top-values bar
-  const totalSamples = Math.max(col.cardinality, 1);
-  const slots = Math.min(col.sample.length, 3);
-  const sharePerSlot = slots > 0 ? (1 / Math.max(slots, 1)) * Math.min(slots / totalSamples + 0.4, 0.95) : 0;
-  const remaining = Math.max(0, 1 - sharePerSlot * slots);
+  if (col.type === 'number' && col.min !== undefined && col.max !== undefined) {
+    return (
+      <p className="truncate type-mono-tiny text-[color:var(--color-ink-muted)]">
+        <span className="text-[color:var(--color-ink)] tabular-nums">{formatNumber(col.min)}</span>
+        <span className="mx-1.5 text-[color:var(--color-ink-faint)]">→</span>
+        <span className="text-[color:var(--color-ink)] tabular-nums">{formatNumber(col.max)}</span>
+      </p>
+    );
+  }
 
+  if (col.topValues && col.topValues.length > 0) {
+    const total = col.topValues.reduce((sum, v) => sum + v.count, 0) || 1;
+    return (
+      <div className="space-y-1">
+        {col.topValues.slice(0, 3).map((v, i) => {
+          const pct = (v.count / total) * 100;
+          return (
+            <div key={v.value} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 text-[11px]">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <span className="truncate type-mono text-[color:var(--color-ink)]">{v.value}</span>
+                <motion.span
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ delay: 0.2 + i * 0.05, duration: 0.4, ease: [0.2, 0.8, 0.2, 1] }}
+                  style={{
+                    width: `${Math.max(pct, 4)}%`,
+                    transformOrigin: 'left',
+                    opacity: 1 - i * 0.2,
+                  }}
+                  className="h-1 rounded-full bg-[color:var(--color-accent)]/40"
+                />
+              </div>
+              <span className="type-mono-tiny tabular-nums text-[color:var(--color-ink-faint)]">{v.count}</span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // Fallback — sample values
   return (
-    <div className="mt-1.5 flex h-1.5 gap-0.5 overflow-hidden rounded-full bg-[color:var(--color-canvas)]">
-      {Array.from({ length: slots }).map((_, i) => (
-        <motion.div
-          key={i}
-          initial={{ scaleX: 0 }}
-          animate={{ scaleX: 1 }}
-          transition={{ delay: 0.2 + i * 0.04, duration: 0.4, ease: [0.2, 0.8, 0.2, 1] }}
-          style={{
-            width: `${sharePerSlot * 100}%`,
-            transformOrigin: 'left',
-            opacity: 1 - i * 0.25,
-          }}
-          className="bg-[color:var(--color-accent)]/60"
-        />
-      ))}
-      {remaining > 0 && (
-        <motion.div
-          initial={{ scaleX: 0 }}
-          animate={{ scaleX: 1 }}
-          transition={{ delay: 0.2 + slots * 0.04, duration: 0.4, ease: [0.2, 0.8, 0.2, 1] }}
-          style={{ width: `${remaining * 100}%`, transformOrigin: 'left' }}
-          className="bg-[color:var(--color-ink-faint)]/30"
-        />
-      )}
-    </div>
+    <p className="truncate type-mono-tiny text-[color:var(--color-ink-faint)]">
+      {col.sample.slice(0, 3).join(' · ')}
+    </p>
   );
 }
 
-function formatBound(v: number | string): string {
-  if (typeof v === 'number') {
-    return v.toLocaleString(undefined, { maximumFractionDigits: 2 });
-  }
+function formatNumber(v: number | string): string {
+  if (typeof v === 'number') return v.toLocaleString(undefined, { maximumFractionDigits: 2 });
   return String(v);
 }

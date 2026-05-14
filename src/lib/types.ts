@@ -8,6 +8,17 @@ export type ColumnProfile = {
   sample: string[];
   min?: number | string;
   max?: number | string;
+  /**
+   * For categorical strings: top values by frequency with counts. Up to
+   * 4 entries. Drives the top-values bar in the column profile chart.
+   */
+  topValues?: Array<{ value: string; count: number }>;
+  /**
+   * For numeric columns: a 10-bucket histogram of values. Each bucket
+   * has the lower edge and the count in that bucket. Drives the
+   * histogram micro-chart.
+   */
+  histogram?: Array<{ bucket: number; count: number }>;
 };
 
 export type DatasetProfile = {

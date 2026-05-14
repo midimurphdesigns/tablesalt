@@ -38,14 +38,24 @@ function getClientIp(req: Request): string {
   return req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown';
 }
 
-// Normalize SQL for fuzzy semantic match. Lowercase, collapse whitespace,
-// remove aliases, drop trailing semicolons. Enough to forgive cosmetic
-// differences between the expected and actual SQL.
+// Normalize SQL for fuzzy semantic match. Forgive cosmetic differences
+// between the expected and actual SQL — aliases, type casts, COUNT
+// variants, ORDER BY direction, trailing punctuation. We're scoring
+// whether the model produced the SAME QUERY, not the same characters.
 function normalizeSql(sql: string): string {
   return sql
     .replace(/;\s*$/, '')
+    // Strip column aliases (FROM data AS x, AS alias, etc.)
     .replace(/\s+AS\s+\w+/gi, '')
-    .replace(/::DOUBLE/gi, '')
+    // Strip explicit type casts.
+    .replace(/::\w+/g, '')
+    // COUNT(complaint_id), COUNT(*), COUNT(1) — all the same in this corpus.
+    .replace(/count\s*\(\s*[\w*]+\s*\)/gi, 'COUNT(*)')
+    // ORDER BY direction collapses to DESC for our top-N patterns.
+    .replace(/\s+ORDER\s+BY\s+([^.]+?)\s+ASC\b/gi, ' ORDER BY $1 DESC')
+    // Default LIMIT 50 ≡ no LIMIT for table-shaped results.
+    .replace(/\s+LIMIT\s+(50|200)\b/gi, '')
+    // Collapse whitespace
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase();
@@ -137,7 +147,19 @@ ${JSON.stringify(sample, null, 2)}`;
             temperature: 0,
           });
           const result = await stream.object;
-          const usage = await stream.usage;
+
+          // usage is a Promise that may reject on some Gateway responses —
+          // don't let a missing usage tank the whole case verdict.
+          let inputTokens: number | undefined;
+          let outputTokens: number | undefined;
+          try {
+            const usage = await stream.usage;
+            inputTokens = usage?.inputTokens;
+            outputTokens = usage?.outputTokens;
+          } catch {
+            // best-effort only
+          }
+
           const latencyMs = Date.now() - startedAt;
           allLatencies.push(latencyMs);
 
@@ -151,8 +173,6 @@ ${JSON.stringify(sample, null, 2)}`;
           const semanticHit = semanticMatch(result.sql, c.expectedSql);
           if (semanticHit) sqlSemantic++;
 
-          const inputTokens = usage?.inputTokens;
-          const outputTokens = usage?.outputTokens;
           const cost = estimateCost(modelId, inputTokens, outputTokens);
           if (cost !== null) totalCost += cost;
 

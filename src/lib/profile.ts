@@ -47,6 +47,46 @@ export async function profileTable(tableName = 'data'): Promise<DatasetProfile> 
         // skip — non-aggregatable column
       }
     }
+
+    // Top-values for categoricals — drives the top-3 bar in the profile UI.
+    if (type === 'string' && cardinality > 1 && cardinality < 50) {
+      try {
+        const topRes = await runQuery(
+          `SELECT ${safeName} AS v, COUNT(*)::INTEGER AS n FROM ${tableName} WHERE ${safeName} IS NOT NULL GROUP BY ${safeName} ORDER BY n DESC LIMIT 4`,
+        );
+        profile.topValues = topRes.rows.map((r) => ({
+          value: String(r.v),
+          count: Number(r.n),
+        }));
+      } catch {
+        // skip
+      }
+    }
+
+    // Histogram for numerics — 10 equal-width buckets.
+    if (type === 'number' && typeof profile.min === 'number' && typeof profile.max === 'number' && profile.max > profile.min) {
+      try {
+        const histRes = await runQuery(
+          `WITH bounds AS (
+             SELECT MIN(${safeName})::DOUBLE AS lo, MAX(${safeName})::DOUBLE AS hi FROM ${tableName}
+           )
+           SELECT
+             LEAST(9, FLOOR((${safeName}::DOUBLE - bounds.lo) / NULLIF((bounds.hi - bounds.lo) / 10.0, 0)))::INTEGER AS bucket,
+             COUNT(*)::INTEGER AS n
+           FROM ${tableName}, bounds
+           WHERE ${safeName} IS NOT NULL
+           GROUP BY bucket
+           ORDER BY bucket`,
+        );
+        profile.histogram = histRes.rows.map((r) => ({
+          bucket: Number(r.bucket),
+          count: Number(r.n),
+        }));
+      } catch {
+        // skip
+      }
+    }
+
     columns.push(profile);
   }
 

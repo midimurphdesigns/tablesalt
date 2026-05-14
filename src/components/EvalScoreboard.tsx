@@ -231,33 +231,40 @@ export function EvalScoreboard() {
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2 }}
-                className="grid grid-cols-[1fr_auto_auto_auto_auto] items-baseline gap-3 border-b border-[color:var(--color-divider)] py-2 last:border-0"
+                className="border-b border-[color:var(--color-divider)] py-2 last:border-0"
               >
-                <span className="truncate type-mono text-[color:var(--color-ink)]">
-                  {c.question}
-                </span>
-                <span className="type-mono-tiny text-[color:var(--color-ink-faint)]">
-                  {c.latencyMs ? `${c.latencyMs} ms` : c.status === 'running' ? '…' : ''}
-                </span>
-                <span className="type-mono-tiny text-[color:var(--color-ink-faint)] tabular-nums">
-                  {c.costUsd !== undefined && c.costUsd !== null ? formatUsd(c.costUsd) : ''}
-                </span>
-                <span className="type-mono-tiny">
-                  {c.verdict ? (
-                    <>
-                      <Mark hit={c.verdict.renderKind} label="kind" />
-                      <Mark hit={c.verdict.executes} label="run" />
-                      <Mark hit={c.verdict.semanticMatch} label="sql" />
-                    </>
-                  ) : c.status === 'error' ? (
-                    <span className="text-[color:var(--color-fail)]">err</span>
-                  ) : (
-                    <span className="text-[color:var(--color-ink-faint)]">·</span>
-                  )}
-                </span>
-                <span className="type-mono-tiny text-[color:var(--color-ink-faint)]">
-                  → {c.expected.renderKind}
-                </span>
+                <div className="grid grid-cols-[1fr_auto_auto_auto_auto] items-baseline gap-3">
+                  <span className="truncate type-mono text-[color:var(--color-ink)]">
+                    {c.question}
+                  </span>
+                  <span className="type-mono-tiny text-[color:var(--color-ink-faint)] tabular-nums">
+                    {c.latencyMs ? `${c.latencyMs} ms` : c.status === 'running' ? '…' : ''}
+                  </span>
+                  <span className="type-mono-tiny text-[color:var(--color-ink-faint)] tabular-nums">
+                    {c.costUsd !== undefined && c.costUsd !== null ? formatUsd(c.costUsd) : ''}
+                  </span>
+                  <span className="type-mono-tiny">
+                    {c.verdict ? (
+                      <>
+                        <Mark hit={c.verdict.renderKind} label="kind" />
+                        <Mark hit={c.verdict.executes} label="run" />
+                        <Mark hit={c.verdict.semanticMatch} label="sql" />
+                      </>
+                    ) : c.status === 'error' ? (
+                      <span className="text-[color:var(--color-fail)]">err</span>
+                    ) : (
+                      <span className="text-[color:var(--color-ink-faint)]">·</span>
+                    )}
+                  </span>
+                  <span className="type-mono-tiny text-[color:var(--color-ink-faint)]">
+                    → {c.expected.renderKind}
+                  </span>
+                </div>
+                {c.error && (
+                  <p className="mt-1 truncate type-mono-tiny text-[color:var(--color-fail)]/80">
+                    {c.error}
+                  </p>
+                )}
               </motion.li>
             ))}
           </AnimatePresence>

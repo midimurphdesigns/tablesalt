@@ -153,5 +153,33 @@ Now answer the user's question. You must emit your reasoning as 4 steps in order
     temperature: 0,
   });
 
-  return result.toTextStreamResponse();
+  // Pipe partial-object snapshots as NDJSON. Each line is a JSON object
+  // with whatever fields the model has produced so far. The client diffs
+  // them and shows the reasoning trace + final answer revealing in real
+  // time. `toTextStreamResponse()` would emit raw chunked bytes which is
+  // harder to parse incrementally on the client.
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        for await (const partial of result.partialObjectStream) {
+          controller.enqueue(encoder.encode(JSON.stringify(partial) + '\n'));
+        }
+      } catch (err) {
+        controller.enqueue(
+          encoder.encode(
+            JSON.stringify({ __error: err instanceof Error ? err.message : 'stream failed' }) + '\n',
+          ),
+        );
+      }
+      controller.close();
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'content-type': 'application/x-ndjson',
+      'cache-control': 'no-store',
+    },
+  });
 }
