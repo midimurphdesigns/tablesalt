@@ -3,6 +3,7 @@ import { openai } from '@ai-sdk/openai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { z } from 'zod';
 import type { ColumnProfile } from '@/lib/types';
+import { checkLimits, getClientIp } from '@/lib/rate-limit';
 
 export const runtime = 'edge';
 export const maxDuration = 30;
@@ -44,6 +45,21 @@ function pickModel() {
 }
 
 export async function POST(req: Request) {
+  // Rate limit + daily cap. Fails open in local dev when Upstash isn't
+  // configured; in production both env vars must be set.
+  const ip = getClientIp(req);
+  const limit = await checkLimits(ip);
+  if (!limit.ok) {
+    const message =
+      limit.reason === 'per-ip'
+        ? "You're sending questions a little fast — give it a minute and try again."
+        : "tablesalt has hit its daily query budget. Come back tomorrow or run it locally — it's open source.";
+    return new Response(message, {
+      status: 429,
+      headers: { 'retry-after': String(limit.retryAfterSeconds) },
+    });
+  }
+
   let body: Body;
   try {
     body = (await req.json()) as Body;
