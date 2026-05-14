@@ -40,7 +40,19 @@ type Body = {
 
 function pickModel() {
   const provider = (process.env.TABLESALT_MODEL_PROVIDER ?? 'openai').toLowerCase();
-  if (provider === 'anthropic') return anthropic('claude-haiku-4-5');
+  if (provider === 'anthropic') {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      throw new Error(
+        'TABLESALT_MODEL_PROVIDER is "anthropic" but ANTHROPIC_API_KEY is not set.',
+      );
+    }
+    return anthropic('claude-haiku-4-5');
+  }
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error(
+      'OPENAI_API_KEY is not set. Add it in Vercel environment variables, or set TABLESALT_MODEL_PROVIDER=anthropic with ANTHROPIC_API_KEY.',
+    );
+  }
   return openai('gpt-4o-mini');
 }
 
@@ -110,8 +122,16 @@ ${schemaLines}
 
 Now answer the user's question. Be brief in reasoning. Choose the render kind that lets the answer speak for itself.`;
 
+  let model;
+  try {
+    model = pickModel();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Model not configured.';
+    return new Response(message, { status: 500 });
+  }
+
   const result = streamObject({
-    model: pickModel(),
+    model,
     schema: responseSchema,
     system,
     prompt: question,
