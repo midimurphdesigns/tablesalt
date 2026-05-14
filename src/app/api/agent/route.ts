@@ -135,6 +135,14 @@ ${schemaLines}
 );  -- approximately ${rowCount} rows
 \`\`\`${sampleBlock}
 
+Vague question protocol:
+- If the user asks something open-ended like "what are the key correlations?" or "summarize this data" or "tell me something interesting", DO NOT default to SELECT COUNT(*). Instead, pick the most informative exploratory query you can defend:
+  - Prefer GROUP BY on the lowest-cardinality categorical column with the highest-cardinality numeric column aggregated.
+  - If no numeric columns, GROUP BY on two categoricals (the lowest-cardinality pair) and produce a crosstab counts table.
+  - If only one column matters, GROUP BY that column with COUNT(*).
+- For "summary" / "overview" questions, produce a bar chart of the most informative grouping, never a single scalar.
+- The render kind must reflect what the query actually returns — never claim "stat" for a multi-row result.
+
 Now answer the user's question. You must emit your reasoning as 4 steps in order: (1) profile_schema, (2) pick_render_kind, (3) draft_sql, (4) validate_sql. Each step's note is one short sentence the user will see live as you think. Then return the final summary, SQL, render kind, and caption. Be brief.`;
 
   let model;

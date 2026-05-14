@@ -72,6 +72,45 @@ export function AppShell() {
   return (
     <main className="container-edge py-16 md:py-24">
       {/* Hero */}
+      {/* Top links — always visible, mono-tiny, hover-cyan */}
+      <nav className="mb-12 flex flex-wrap items-center gap-x-5 gap-y-2 type-mono-tiny">
+        <a
+          href="https://github.com/midimurphdesigns/tablesalt"
+          target="_blank"
+          rel="noreferrer"
+          className="text-[color:var(--color-ink-muted)] transition-colors hover:text-[color:var(--color-accent)]"
+        >
+          github ↗
+        </a>
+        <span className="text-[color:var(--color-ink-faint)]">·</span>
+        <a
+          href="https://kevinmurphywebdev.com/blog/building-tablesalt"
+          target="_blank"
+          rel="noreferrer"
+          className="text-[color:var(--color-ink-muted)] transition-colors hover:text-[color:var(--color-accent)]"
+        >
+          read the blog post ↗
+        </a>
+        <span className="text-[color:var(--color-ink-faint)]">·</span>
+        <a
+          href="https://www.npmjs.com/package/streamfield"
+          target="_blank"
+          rel="noreferrer"
+          className="text-[color:var(--color-ink-muted)] transition-colors hover:text-[color:var(--color-accent)]"
+        >
+          streamfield on npm ↗
+        </a>
+        <span className="text-[color:var(--color-ink-faint)]">·</span>
+        <a
+          href="https://kevinmurphywebdev.com"
+          target="_blank"
+          rel="noreferrer"
+          className="text-[color:var(--color-ink-muted)] transition-colors hover:text-[color:var(--color-accent)]"
+        >
+          made by kevin murphy ↗
+        </a>
+      </nav>
+
       <header className="mb-16 max-w-[72ch]">
         <p className="eyebrow">tablesalt</p>
         <h1 className="type-display mt-6 text-[clamp(48px,8vw,96px)] text-[color:var(--color-ink)]">

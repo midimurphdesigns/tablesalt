@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { evalSet } from '@/lib/evals';
 import { formatUsd } from '@/lib/pricing';
@@ -38,7 +38,17 @@ export function EvalScoreboard() {
   const [cases, setCases] = useState<CaseState[]>([]);
   const [aggregate, setAggregate] = useState<Aggregate | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState<number | null>(null);
   const [model, setModel] = useState<string | null>(null);
+
+  // Countdown for rate-limit cooldown — refreshes every second.
+  useEffect(() => {
+    if (cooldown === null || cooldown <= 0) return;
+    const t = setInterval(() => {
+      setCooldown((c) => (c === null ? null : Math.max(0, c - 1)));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [cooldown]);
 
   const start = useCallback(async () => {
     setRun('running');
@@ -49,8 +59,18 @@ export function EvalScoreboard() {
     try {
       const res = await fetch('/api/eval', { method: 'POST' });
       if (!res.ok || !res.body) {
-        const msg = await res.text();
-        setErrorMsg(msg || `eval request failed (${res.status})`);
+        const raw = await res.text();
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed?.error === 'rate-limited') {
+            setErrorMsg(parsed.message ?? "You've hit the eval rate limit.");
+            setCooldown(Number(parsed.retryAfterSeconds) || null);
+          } else {
+            setErrorMsg(parsed?.message ?? raw ?? `eval request failed (${res.status})`);
+          }
+        } catch {
+          setErrorMsg(raw || `eval request failed (${res.status})`);
+        }
         setRun('error');
         return;
       }
@@ -168,14 +188,20 @@ export function EvalScoreboard() {
         )}
         {run === 'error' && errorMsg && (
           <div className="rounded-lg border border-[color:var(--color-fail)]/30 bg-[color:var(--color-fail)]/5 px-4 py-3 type-mono text-[color:var(--color-fail)]">
-            {errorMsg}
-            <button
-              type="button"
-              onClick={start}
-              className="ml-3 underline underline-offset-4 hover:no-underline"
-            >
-              retry
-            </button>
+            <p>{errorMsg}</p>
+            {cooldown !== null && cooldown > 0 ? (
+              <p className="mt-1 type-mono-tiny text-[color:var(--color-ink-muted)]">
+                ready again in {formatCountdown(cooldown)}
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={start}
+                className="mt-2 inline-block underline underline-offset-4 hover:no-underline"
+              >
+                retry
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -272,6 +298,13 @@ export function EvalScoreboard() {
       )}
     </section>
   );
+}
+
+function formatCountdown(s: number): string {
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  const rem = s % 60;
+  return rem === 0 ? `${m}m` : `${m}m ${rem}s`;
 }
 
 function Mark({ hit, label }: { hit: boolean; label: string }) {

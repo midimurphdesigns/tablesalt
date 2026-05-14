@@ -25,11 +25,13 @@ const redis =
       })
     : null;
 
-// Eval is expensive (12 model calls per run). Cap at 1 run per IP per hour.
+// Eval is ~12 model calls per run. 5 runs/hour/IP gives a visitor
+// enough headroom to stress-test the demo without burning budget. The
+// monthly Gateway cap is the hard ceiling underneath.
 const evalLimiter = redis
   ? new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(1, '1 h'),
+      limiter: Ratelimit.slidingWindow(5, '1 h'),
       prefix: 'tablesalt:eval',
     })
   : null;
@@ -72,7 +74,7 @@ export async function POST(req: Request) {
       return new Response(
         JSON.stringify({
           error: 'rate-limited',
-          message: 'One eval run per hour per visitor. Try again later.',
+          message: "You've hit the per-visitor eval cap (5/hour). Cooling off.",
           retryAfterSeconds: Math.max(1, Math.ceil((reset - Date.now()) / 1000)),
         }),
         { status: 429, headers: { 'content-type': 'application/json' } },

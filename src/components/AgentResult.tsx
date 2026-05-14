@@ -1,6 +1,7 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
 import type { AgentResponse, QueryResult } from '@/lib/types';
 import { ReasoningSteps } from './ReasoningSteps';
 import { TableRender } from './renders/TableRender';
@@ -17,11 +18,30 @@ type Props = {
   error: string | null;
 };
 
+// Pacing budget — must roughly match ReasoningSteps' STEP_REVEAL_MS * 4
+// plus the typewriter tail on the last step. Tuned by feel; visible
+// agent loop is ~2.4s end-to-end.
+const REVEAL_BUDGET_MS = 2400;
+
 export function AgentResult({ status, partial, result, latencyMs, error }: Props) {
+  // Gate the answer on the reasoning trace finishing its paced reveal.
+  // Without this, the chart pops in instantly the moment the model
+  // finishes — the whole "watch the agent think" moment evaporates.
+  const [readyToShowAnswer, setReadyToShowAnswer] = useState(false);
+
+  useEffect(() => {
+    if (status !== 'complete') {
+      setReadyToShowAnswer(false);
+      return;
+    }
+    const t = setTimeout(() => setReadyToShowAnswer(true), REVEAL_BUDGET_MS);
+    return () => clearTimeout(t);
+  }, [status]);
+
   if (status === 'idle') return null;
 
-  const showAnswer = status === 'complete' && result && partial.renderKind;
-  const showThinking = status === 'thinking' || status === 'executing';
+  const showAnswer = status === 'complete' && result && partial.renderKind && readyToShowAnswer;
+  const showThinking = status === 'thinking' || status === 'executing' || (status === 'complete' && !readyToShowAnswer);
 
   return (
     <motion.section
@@ -39,10 +59,11 @@ export function AgentResult({ status, partial, result, latencyMs, error }: Props
         <p className="eyebrow">
           {status === 'thinking' && 'thinking…'}
           {status === 'executing' && 'running query…'}
-          {status === 'complete' && 'answer'}
+          {status === 'complete' && !readyToShowAnswer && 'composing answer…'}
+          {status === 'complete' && readyToShowAnswer && 'answer'}
           {status === 'error' && 'error'}
         </p>
-        {latencyMs !== null && status === 'complete' && (
+        {latencyMs !== null && status === 'complete' && readyToShowAnswer && (
           <p className="type-mono-tiny text-[color:var(--color-ink-faint)]">{latencyMs} ms</p>
         )}
       </header>
@@ -88,7 +109,7 @@ export function AgentResult({ status, partial, result, latencyMs, error }: Props
             how the agent got there
           </summary>
           <div className="mt-5">
-            <ReasoningSteps steps={partial.steps} />
+            <ReasoningSteps steps={partial.steps} immediate />
           </div>
           {partial.sql && (
             <div className="mt-6">
