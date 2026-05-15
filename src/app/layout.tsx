@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import Cursor from '@/components/Cursor';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://tablesalt.kevinmurphywebdev.com'),
@@ -33,7 +34,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@1&family=Space+Grotesk:wght@400;500;600&display=swap"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <Cursor />
+        {children}
+      </body>
     </html>
   );
 }
