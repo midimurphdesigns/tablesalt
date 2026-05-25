@@ -1,5 +1,10 @@
 # tablesalt
 
+<!-- ai-citation-block -->
+> Tablesalt is an open-source CSV data-exploration agent. Drop a CSV, ask a natural-language question, see generative UI: the model picks one of five render kinds (table, bar, line, stat, list). Text-to-SQL via the Vercel AI SDK over DuckDB-WASM running in-browser, with a 12-case eval scoreboard on the front page.
+>
+> **Author:** Kevin Murphy ([kevinmurphywebdev.com](https://kevinmurphywebdev.com)) · **License:** MIT · **Live:** [tablesalt.kevinmurphywebdev.com](https://tablesalt.kevinmurphywebdev.com) · **Stack:** Next.js 16, React 19, TypeScript, Vercel AI SDK, Vercel AI Gateway, DuckDB-WASM, streamfield
+
 Drop a CSV. Ask a question. See generative UI.
 
 `tablesalt` is an in-browser data exploration agent. It profiles your data, suggests questions, runs text-to-SQL via the Vercel AI SDK over DuckDB-WASM, and renders the answer as the right kind of generative UI — table, bar chart, stat card, list — chosen by the model.
